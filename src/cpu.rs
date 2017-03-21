@@ -4,13 +4,13 @@ use std::collections::HashMap;
 
 
 pub struct CPU {
-	pub mem: [u8; 4096],
-	regs: [u8; 16],
-	index: u16,
-	stack: [u16; 16],
-	sp: u8,
-	opcode: u16,
-	pc: u16,
+    pub mem: [u8; 4096],
+    pub regs: [u8; 16],
+    pub index: u16,
+    pub stack: [u16; 16],
+    pub sp: u8,
+    pub opcode: u16,
+    pub pc: u16,
 }
 
 

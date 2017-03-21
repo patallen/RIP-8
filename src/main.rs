@@ -1,9 +1,13 @@
 mod cpu;
+mod debugger;
 
 use cpu::CPU;
-
+use debugger::Debugger;
 
 fn main() {
-	let mut cpu = CPU::new();
-	cpu.load_rom("/Users/patallen/Code/Rust/chip8/src/roms/connect4.ch8");
+	let connect4 = "/Users/patallen/Code/Rust/chip8/src/roms/connect4.ch8";
+	// let mut cpu = CPU::new();
+	// cpu.load_rom(connect4);
+	let mut bugger = Debugger::new(connect4);
+	bugger.run();
 }
