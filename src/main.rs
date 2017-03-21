@@ -1,6 +1,6 @@
 mod memory;
 
-use memory::CPU;
+use cpu::CPU;
 
 
 fn main() {
