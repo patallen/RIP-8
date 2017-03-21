@@ -1,6 +1,6 @@
 mod memory;
 
-use memory::{CPU, parse_opcode};
+use memory::CPU;
 
 
 fn main() {
@@ -12,5 +12,5 @@ fn main() {
 	// }
 
 	println!("{}", cpu.opcode_at_address(512));
-	parse_opcode(4634);
+	cpu.parse_opcode(4634);
 }
