@@ -8,6 +8,7 @@ pub struct CPU {
 	regs: [u8; 16],
 	index: u16,
 	stack: [u16; 16],
+	sp: u8,
 	opcode: u16,
 	pc: u16,
 }
@@ -20,6 +21,7 @@ impl CPU {
 			regs: [0; 16],
 			index: 0,
 			stack: [0; 16],
+			sp: 0, // Pointer to the topmost of the stack
 			opcode: 0,
 			pc: 0x200
 		}
@@ -29,6 +31,9 @@ impl CPU {
 		let opcode = self.opcode_at_address(pim).to_owned();
 		self.run_operation_for_opcode(opcode);
 		self.opcode = opcode;
+
+		println!("Stack Pointer: {}", self.sp);
+		println!("Top of stack: {}", self.stack[self.sp as usize]);
 	}
 	pub fn load_rom(&mut self, filepath: &str) {
 		let mut rom: Vec<u8> = Vec::new();
@@ -67,11 +72,16 @@ impl CPU {
 	}
 	fn x0_refine_code(&mut self, code: u16) {
 		// Could be 0x00E0, 0x00EE, or 0x0NNN
-		// match code {
-		// 	0x00EE 	=> "0x00EE",
-		// 	0x00E0 	=> "0x00E0",
-		// 	_ 		=> "0x0nnn",
-		// }
+		match code {
+			0x00EE 	=> self.x0_return_from_sub(code),
+			// 0x00E0 	=> "0x00E0",
+			// _ 		=> "0x0nnn",
+			_ => panic!("Nope")
+		}
+	}
+	fn x0_return_from_sub(&mut self, code: u16) {
+		self.pc = self.stack[self.sp as usize];
+		self.sp -=1;
 	}
 	fn x1_goto(&mut self, code: u16) {
 		// GOTO -> Set the PC to the specified address.
@@ -80,7 +90,10 @@ impl CPU {
 		self.pc = code & 0x0FFF;
 	}
 	fn x2_call_sub(&mut self, code: u16) {
-		// "0x2nnn"
+		self.sp += 1;
+		self.stack[self.sp as usize] = self.pc;
+		println!("Result: {}", code & 0xFFF);
+		self.pc = code & 0x0FFF;
 	}
 	fn x3_skip_if_eq(&mut self, code: u16) {
 		// "0x3xnn"
@@ -153,7 +166,7 @@ impl CPU {
 }
 
 #[test]
-pub fn test_run_operation_for_goto(){
+pub fn test_run_operation_for_goto() {
 	// opcode = 0x10 << 8 | 0xF0 = 0x10F0
 	// this means that our GOTO should take the last 3 hex
 	// digits and put them into our program counter
@@ -164,6 +177,29 @@ pub fn test_run_operation_for_goto(){
 	assert_eq!(0x0F0, cpu.pc);
 }
 
+#[test]
+pub fn test_run_operation_for_call_sub() {
+	let mut cpu = CPU::new();
+	cpu.mem[0x200] = 0x21;
+	cpu.mem[0x201] = 0x00;
+	cpu.cycle();
+	assert_eq!(cpu.sp, 1);
+	assert_eq!(cpu.stack[cpu.sp as usize], 0x200);
+	assert_eq!(cpu.pc, 0x100);
+}
+
+#[test]
+pub fn test_return_from_sub() {
+	let mut cpu = CPU::new();
+	cpu.mem[0x200] = 0x23;
+	cpu.mem[0x201] = 0x00;
+	cpu.mem[0x300] = 0x00;
+	cpu.mem[0x301] = 0xEE;
+	cpu.cycle();
+	cpu.cycle();
+	assert_eq!(cpu.pc, 0x200);
+	assert_eq!(cpu.sp, 0);
+}
 // #[test]
 // pub fn test_first_cycle
 // #[test]
