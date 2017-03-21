@@ -1,5 +1,6 @@
 mod cpu;
 mod debugger;
+mod opcodes;
 
 use cpu::CPU;
 use debugger::Debugger;
