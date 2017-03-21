@@ -24,6 +24,12 @@ impl CPU {
 			pc: 0x200
 		}
 	}
+	pub fn cycle(&mut self) {
+		let pim = self.pc as usize;
+		let opcode = self.opcode_at_address(pim).to_owned();
+		self.run_operation_for_opcode(opcode);
+		self.opcode = opcode;
+	}
 	pub fn load_rom(&mut self, filepath: &str) {
 		let mut rom: Vec<u8> = Vec::new();
 		let mut file = File::open(filepath).unwrap();
@@ -36,9 +42,9 @@ impl CPU {
 	pub fn opcode_at_address(&self, address: usize) -> u16 {
 		let mut ret = self.mem[address] as u16;
 		let ret2 = self.mem[address + 1] as u16;
-		ret << 8 | ret2
+		(ret << 8 | ret2)
 	}
-	pub fn run_operation_for_code<'a>(&mut self, code: u16) {
+	pub fn run_operation_for_opcode<'a>(&mut self, code: u16) {
 		let rex = match code & 0xF000 {
 			0x0000 => self.x0_refine_code(code),
 			0x1000 => self.x1_goto(code),
@@ -148,10 +154,18 @@ impl CPU {
 
 #[test]
 pub fn test_run_operation_for_goto(){
+	// opcode = 0x10 << 8 | 0xF0 = 0x10F0
+	// this means that our GOTO should take the last 3 hex
+	// digits and put them into our program counter
 	let mut cpu = CPU::new();
-	cpu.run_operation_for_code(0x1123);
-	assert_eq!(0x123, cpu.pc);
+	cpu.mem[0x200] = 0x10;
+	cpu.mem[0x201] = 0xF0;
+	cpu.cycle();
+	assert_eq!(0x0F0, cpu.pc);
 }
+
+// #[test]
+// pub fn test_first_cycle
 // #[test]
 // pub fn test_op_codes() {
 // 	let mut cpu = CPU::new();

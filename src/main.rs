@@ -1,4 +1,4 @@
-mod memory;
+mod cpu;
 
 use cpu::CPU;
 
