@@ -29,6 +29,7 @@ impl CPU {
 	pub fn cycle(&mut self) {
 		let pim = self.pc as usize;
 		let opcode = self.opcode_at_address(pim).to_owned();
+		self.pc += 2;
 		self.run_operation_for_opcode(opcode);
 		self.opcode = opcode;
 
@@ -184,7 +185,7 @@ pub fn test_run_operation_for_call_sub() {
 	cpu.mem[0x201] = 0x00;
 	cpu.cycle();
 	assert_eq!(cpu.sp, 1);
-	assert_eq!(cpu.stack[cpu.sp as usize], 0x200);
+	assert_eq!(cpu.stack[cpu.sp as usize], 0x202);
 	assert_eq!(cpu.pc, 0x100);
 }
 
@@ -197,7 +198,7 @@ pub fn test_return_from_sub() {
 	cpu.mem[0x301] = 0xEE;
 	cpu.cycle();
 	cpu.cycle();
-	assert_eq!(cpu.pc, 0x200);
+	assert_eq!(cpu.pc, 0x202);
 	assert_eq!(cpu.sp, 0);
 }
 // #[test]
