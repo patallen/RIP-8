@@ -1,7 +1,9 @@
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
+use ::DEBUG;
+
 
 pub struct CPU {
     pub mem: [u8; 4096],
@@ -16,7 +18,7 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> CPU {
-        CPU {
+        let mut cpu = CPU {
             mem: [0; 4096],
             regs: [0; 16],
             index: 0,
@@ -24,16 +26,31 @@ impl CPU {
             sp: 0, // Pointer to the topmost of the stack
             opcode: 0,
             pc: 0x200
+        };
+        cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
+        cpu
+    }
+    pub fn run(&mut self) {
+        loop {
+            self.opcode = self.opcode_at_address(self.pc as usize);
+            if DEBUG {
+                let inst = parse_opcode(self.opcode).unwrap();
+                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}.\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize]);
+                let mut s = String::new();
+                io::stdin().read_line(&mut s).unwrap();
+            }
+            self.cycle();
         }
     }
     pub fn cycle(&mut self) {
-        let pim = self.pc as usize;
-        self.opcode = self.opcode_at_address(pim).to_owned();
-        self.pc += 2;
-        match parse_opcode(self.opcode) {
+        let inst = parse_opcode(self.opcode);
+
+        match inst {
             Ok(code) => self.run_opcode_instruction(code),
             Err(e) => panic!("{}", e),
         };
+
+        self.pc += 2;
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();
