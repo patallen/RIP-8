@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
-
+use opcodes::{parse_opcode, OpCode};
 
 pub struct CPU {
     pub mem: [u8; 4096],
@@ -28,13 +28,12 @@ impl CPU {
     }
     pub fn cycle(&mut self) {
         let pim = self.pc as usize;
-        let opcode = self.opcode_at_address(pim).to_owned();
+        self.opcode = self.opcode_at_address(pim).to_owned();
         self.pc += 2;
-        self.run_operation_for_opcode(opcode);
-        self.opcode = opcode;
-
-        // println!("Stack Pointer: {}", self.sp);
-        // println!("Top of stack: {}", self.stack[self.sp as usize]);
+        match parse_opcode(self.opcode) {
+            Ok(code) => self.run_opcode_instruction(code),
+            Err(e) => panic!("{}", e),
+        };
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();
@@ -50,118 +49,157 @@ impl CPU {
         let ret2 = self.mem[address + 1] as u16;
         (ret << 8 | ret2)
     }
-    pub fn run_operation_for_opcode<'a>(&mut self, code: u16) {
-        let rex = match code & 0xF000 {
-            0x0000 => self.x0_refine_code(code),
-            0x1000 => self.x1_goto(code),
-            0x2000 => self.x2_call_sub(code),
-            0x3000 => self.x3_skip_if_eq(code),
-            0x4000 => self.x4_skip_if_neq(code),
-            0x5000 => self.x5_skip_if_regs_eq(code),
-            0x6000 => self.x6_refine_code(code),
-            0x7000 => self.x7_add_to_reg(code),
-            0x8000 => self.x8_refine_code(code),
-            0x9000 => self.x9_skip_if_regs_neq(code),
-            0xA000 => self.xa_store_in_i(code),
-            0xB000 => self.xb_jump_to(code),
-            0xC000 => self.xc_set_reg_random(code),
-            0xD000 => self.xd_draw_sprite(code),
-            0xE000 => self.xe_refine_code(code),
-            0xF000 => self.xf_refine_code(code),
-            _ => panic!("run_operation failed."),
-        };
-    }
-    fn x0_refine_code(&mut self, code: u16) {
-        // Could be 0x00E0, 0x00EE, or 0x0NNN
-        match code {
-            0x00EE  => self.x0_return_from_sub(code),
-            // 0x00E0   => "0x00E0",
-            // _        => "0x0nnn",
-            _ => panic!("Nope")
+    pub fn run_opcode_instruction<'a>(&mut self, instrcode: OpCode) {
+        match instrcode {
+            SysAddressJump_0x0000           =>  self.system_address_jump(),
+            ClearDisplay_0x00E0             =>  self.clear_display(),
+            RetFromSubroutine_0x00EE        =>  self.return_from_sub(),
+            JumpLocation_0x1000             =>  self.jump_to_location(),
+            CallSubroutine_0x2000           =>  self.call_subroutine(),
+            SkipInstrIfVxEqPL_0x3000        =>  self.skip_instr_if_vx_eq_pl(),
+            SkipInstrIfVxNotEqPL_0x4000     =>  self.skip_instr_if_vs_neq_pl(),
+            SkipInstrIfVxVy_0x5000          =>  self.skip_instr_if_vx_eq_vy(),
+            SetVxToPL_0x6000                =>  self.set_vs_to_pl(),
+            IncrementVxByPL_0x7000          =>  self.increment_vx_by_pl(),
+            SetVxToVy_0x8000                =>  self.set_vx_to_vy(),
+            SetVxToVxORVy_0x8001            =>  self.set_vx_to_vx_or_vy(),
+            SetVxToVxANDVy_0x8002           =>  self.set_vx_to_vx_and_vy(),
+            SetVxToVxXORVy_0x8003           =>  self.set_vx_to_vx_xor_vy(),
+            IncrementVxByVyAndCarry_0x8004  =>  self.increment_vx_by_vy_carry(),
+            DecrementVxByVyNoBorrow_0x8005  =>  self.decrenent_vx_by_vy_no_borrow(),
+            ShiftAndRotateVxRight_0x8006    =>  self.shift_and_rotate_vx_right(),
+            DecrementVyByVxNoBorrow_0x8007  =>  self.decrement_vy_by_vx_no_borrow(),
+            ShiftAndRotateVxLeft_0x800E     =>  self.shift_and_rotate_vx_left(),
+            SkipInstrIfVxNotVy_0x9000       =>  self.skip_instr_if_vx_not_vy(),
+            SetIndexRegToPL_0xA000          =>  self.set_index_register_to_pl(),
+            JumpToV0PlusPL_0xB000           =>  self.jump_to_v0_plus_pl(),
+            SetVxRandByteANDPL_0xC000       =>  self.set_vx_rand_byte_and_pl(),
+            DisplaySpriteSetVfColl_0xD000   =>  self.display_sprite_set_vf_collision(),
+            SkipInstrIfVxPressed_0xE09E     =>  self.skip_instr_if_vx_pressed(),
+            SkipInstrIfVxNotPressed_0xE0A1  =>  self.skip_instr_if_vx_not_pressed(),
+            SetVxToDelayTimerVal_0xF007     =>  self.set_vs_to_delay_timer_val(),
+            WaitForKeyStoreInVx_0xF00A      =>  self.wait_for_key_and_store_in_vx(),
+            SetDelayTimerToVx_0xF015        =>  self.set_delay_timer_to_vx(),
+            SetSoundTimerToVx_0xF018        =>  self.set_sound_timer_to_vx(),
+            IncrementIndexRegByVx_0xF01E    =>  self.increment_index_register_by_vx(),
+            SetIndexRegToVxSprite_0xF029    =>  self.set_index_register_to_vx_sprite(),
+            StoreBCDOfVxIn3Bytes_0xF033     =>  self.store_bcd_of_vx_3bytes(),
+            StoreRegsUptoVx_0xF055          =>  self.store_registers_through_vx(),
+            ReadRegsUptoVx_0xF065           =>  self.read_registers_through_vx(),   
         }
     }
-    fn x0_return_from_sub(&mut self, code: u16) {
+    fn system_address_jump(&mut self) {
+
+    }
+    fn return_from_sub(&mut self) {
         self.pc = self.stack[self.sp as usize];
         self.sp -=1;
     }
-    fn x1_goto(&mut self, code: u16) {
+    fn clear_display(&mut self) {
+
+    }
+    fn jump_to_location(&mut self) {
         // GOTO -> Set the PC to the specified address.
         // Doing so will make the interpreter pick up at this address
         // on the next cycle.
+        let code = self.opcode;
         self.pc = code & 0x0FFF;
     }
-    fn x2_call_sub(&mut self, code: u16) {
+    fn call_subroutine(&mut self) {
+        let code = self.opcode;
         self.sp += 1;
         self.stack[self.sp as usize] = self.pc;
         self.pc = code & 0x0FFF;
     }
-    fn x3_skip_if_eq(&mut self, code: u16) {
+    fn skip_instr_if_vx_eq_pl(&mut self) {
         // "0x3xnn"
     }
-    fn x4_skip_if_neq(&mut self, code: u16) {
+    fn skip_instr_if_vs_neq_pl(&mut self) {
         // "0x4xnn"
     }
-    fn x5_skip_if_regs_eq(&mut self, code: u16) {
+    fn skip_instr_if_vx_eq_vy(&mut self) {
         // "0x5xy0"
     }
-    fn x6_refine_code(&mut self, code: u16) {
-        // "0x6xnn"
+    fn set_vs_to_pl(&mut self) {
+
     }
-    fn x7_add_to_reg(&mut self, code: u16) {
+    fn increment_vx_by_pl(&mut self) {
         // "0x7xnn"
     }
-    fn x8_refine_code(&mut self, code: u16) {
-        // 0x8xy0, 0x8xy1, 0x8xy2, 0x8xy3, 0x8xy4, 0x8xy5, 0x8xy6, 0x8xy7, 0x8xyE
-        // match code & 0x000F {
-        //  0x0 => "0x8xy0",
-        //  0x1 => "0x8xy1",
-        //  0x2 => "0x8xy2",
-        //  0x3 => "0x8xy3",
-        //  0x4 => "0x8xy4",
-        //  0x5 => "0x8xy5",
-        //  0x6 => "0x8xy6",
-        //  0x7 => "0x8xy7",
-        //  0xE => "0x8xyE",
-        //  _ => "Error"
-        // }
+    fn set_vx_to_vy(&mut self) {
+
     }
-    fn x9_skip_if_regs_neq(&mut self, code: u16) {
-        // "0x9xy0"
+    fn set_vx_to_vx_or_vy(&mut self) {
+
     }
-    fn xa_store_in_i(&mut self, code: u16) {
-        // "0xAnnn"
+    fn set_vx_to_vx_and_vy(&mut self) {
+
     }
-    fn xb_jump_to(&mut self, code: u16) {
-        // "0xBnnn"
+    fn set_vx_to_vx_xor_vy(&mut self) {
+
     }
-    fn xc_set_reg_random(&mut self, code: u16) {
-        // "0xCxnn"
+    fn increment_vx_by_vy_carry(&mut self) {
+
     }
-    fn xd_draw_sprite(&mut self, code: u16) {
-        // "0xDxyn"
+    fn decrenent_vx_by_vy_no_borrow(&mut self) {
+
     }
-    fn xe_refine_code(&mut self, code: u16) {
-        // // 0xEx9E, 0xExA1
-        // match code & 0x00FF {
-        //  0x9E => "0xEx9E",
-        //  0xA1 => "0xExA1",
-        //  _ => "Error"
-        // }
+    fn shift_and_rotate_vx_right(&mut self) {
+
     }
-    fn xf_refine_code(&mut self, code: u16) {
-        // // 0xFx07, 0xFx0A, 0xFx15, 0xFx18, 0xFx1E, 0xFx29, 0xFx33, 0xFx55, 0xFx65
-        // match code & 0x00FF {
-        //  0x07 => "0xFx07",
-        //  0x0A => "0xFx0A",
-        //  0x15 => "0xFx15",
-        //  0x18 => "0xFx18",
-        //  0x1E => "0xFx1E",
-        //  0x29 => "0xFx29",
-        //  0x33 => "0xFx33",
-        //  0x55 => "0xFx55",
-        //  0x65 => "0xFx65",
-        //  _ => "Error"
-        // }
+    fn decrement_vy_by_vx_no_borrow(&mut self) {
+
+    }
+    fn shift_and_rotate_vx_left(&mut self) {
+
+    }
+    fn skip_instr_if_vx_not_vy(&mut self) {
+
+    }
+    fn set_index_register_to_pl(&mut self) {
+
+    }
+    fn jump_to_v0_plus_pl(&mut self) {
+
+    }
+    fn set_vx_rand_byte_and_pl(&mut self) {
+
+    }
+    fn display_sprite_set_vf_collision(&mut self) {
+
+    }
+    fn skip_instr_if_vx_pressed(&mut self) {
+
+    }
+    fn skip_instr_if_vx_not_pressed(&mut self) {
+
+    }
+    fn set_vs_to_delay_timer_val(&mut self) {
+
+    }
+    fn wait_for_key_and_store_in_vx(&mut self) {
+
+    }
+    fn set_delay_timer_to_vx(&mut self) {
+
+    }
+    fn set_sound_timer_to_vx(&mut self) {
+
+    }
+    fn increment_index_register_by_vx(&mut self) {
+
+    }
+    fn set_index_register_to_vx_sprite(&mut self) {
+
+    }
+    fn store_bcd_of_vx_3bytes(&mut self) {
+
+    }
+    fn store_registers_through_vx(&mut self) {
+
+    }
+    fn read_registers_through_vx(&mut self) {
+
     }
 }
 
