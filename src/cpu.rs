@@ -35,7 +35,8 @@ impl CPU {
             self.opcode = self.opcode_at_address(self.pc as usize);
             if DEBUG {
                 let inst = parse_opcode(self.opcode).unwrap();
-                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}.\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize]);
+                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
+                println!("{:?}", self.regs);
                 let mut s = String::new();
                 io::stdin().read_line(&mut s).unwrap();
             }
@@ -49,8 +50,6 @@ impl CPU {
             Ok(code) => self.run_opcode_instruction(code),
             Err(e) => panic!("{}", e),
         };
-
-        self.pc += 2;
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();
@@ -74,9 +73,9 @@ impl CPU {
             OpCode::JumpLocation_0x1000             =>  self.jump_to_location(),
             OpCode::CallSubroutine_0x2000           =>  self.call_subroutine(),
             OpCode::SkipInstrIfVxEqPL_0x3000        =>  self.skip_instr_if_vx_eq_pl(),
-            OpCode::SkipInstrIfVxNotEqPL_0x4000     =>  self.skip_instr_if_vs_neq_pl(),
+            OpCode::SkipInstrIfVxNotEqPL_0x4000     =>  self.skip_instr_if_vx_neq_pl(),
             OpCode::SkipInstrIfVxVy_0x5000          =>  self.skip_instr_if_vx_eq_vy(),
-            OpCode::SetVxToPL_0x6000                =>  self.set_vs_to_pl(),
+            OpCode::SetVxToPL_0x6000                =>  self.set_vx_to_pl(),
             OpCode::IncrementVxByPL_0x7000          =>  self.increment_vx_by_pl(),
             OpCode::SetVxToVy_0x8000                =>  self.set_vx_to_vy(),
             OpCode::SetVxToVxORVy_0x8001            =>  self.set_vx_to_vx_or_vy(),
@@ -106,14 +105,18 @@ impl CPU {
         }
     }
     fn system_address_jump(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn return_from_sub(&mut self) {
         self.pc = self.stack[self.sp as usize];
         self.sp -=1;
+        self.pc += 2;
     }
     fn clear_display(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
+        self.pc += 2;
     }
     fn jump_to_location(&mut self) {
         // GOTO -> Set the PC to the specified address.
@@ -129,94 +132,198 @@ impl CPU {
         self.pc = code & 0x0FFF;
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
-        // "0x3xnn"
+        let x = self.opcode << 8 & 0xFF;
+        let nn = self.opcode & 0x00FF;
+
+        match x {
+            n => self.pc += 2,
+            _ => {}
+        }
+        self.pc += 2;
     }
-    fn skip_instr_if_vs_neq_pl(&mut self) {
+    fn skip_instr_if_vx_neq_pl(&mut self) {
         // "0x4xnn"
+        let x = self.opcode << 8 & 0xFF;
+        let nn = self.opcode & 0x00FF;
+
+        match x {
+            n => {},
+            _ => self.pc += 2
+        }
+        self.pc += 2;
     }
     fn skip_instr_if_vx_eq_vy(&mut self) {
-        // "0x5xy0"
-    }
-    fn set_vs_to_pl(&mut self) {
+        let x = self.opcode << 8 & 0xFF;
+        let y = self.opcode << 4 & 0xF;
 
+        match x {
+            y => self.pc += 2,
+            _ => {}
+        }
+        self.pc += 2;
+    }
+    fn set_vx_to_pl(&mut self) {
+        // 0x6xkk - set vx equal to kk
+        let opcode = self.opcode;
+        let kk = opcode & 0x00FF;
+        let x = opcode >> 8 & 0x0F;
+
+        println!("KK: {:X}, X: {:X}", kk, x);
+
+        self.regs[x as usize] = kk as u8;
+        self.pc += 2;
     }
     fn increment_vx_by_pl(&mut self) {
-        // "0x7xnn"
+        let x = self.opcode << 8 & 0xF;
+        let pl = self.opcode & 0x00FF;
+        self.regs[x as usize] = pl as u8;
+        self.pc += 2
     }
     fn set_vx_to_vy(&mut self) {
-
+        let x = self.opcode << 8 & 0xF;
+        let y = self.opcode << 4 & 0xF;
+        self.regs[x as usize] = self.mem[y as usize] as u8;
+        self.pc += 2;
     }
     fn set_vx_to_vx_or_vy(&mut self) {
-
+        let x = (self.opcode << 8 & 0x0F) as usize;
+        let y = (self.opcode << 4 & 0xF) as usize;
+        self.mem[x] = self.mem[x] | self.mem[y];
+        self.pc += 2;
     }
     fn set_vx_to_vx_and_vy(&mut self) {
-
+        let x = (self.opcode << 8 & 0x0F) as usize;
+        let y = (self.opcode << 4 & 0xF) as usize;
+        self.mem[x] = self.mem[x] & self.mem[y];
+        self.pc += 2;
     }
     fn set_vx_to_vx_xor_vy(&mut self) {
-
+        let x = (self.opcode << 8 & 0x0F) as usize;
+        let y = (self.opcode << 4 & 0xF) as usize;
+        self.mem[x] = self.mem[x] ^ self.mem[y];
+        self.pc += 2;
     }
     fn increment_vx_by_vy_carry(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn set_index_register_to_pl(&mut self) {
-
+        let opcode = self.opcode;
+        self.index = opcode & 0x0FFF;
+        self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
+        // Dxyn - DRW Vx, Vy, nibble
+        // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 
+        // The interpreter reads n bytes from memory, starting at the address stored in I. These
+        // bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed
+        // onto the existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise
+        // it is set to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
+        // it wraps around to the opposite side of the screen. 
+        let x = self.opcode >> 8 & 0x0F;
+        let y = self.opcode >> 4 & 0x0F;
+        let n = self.opcode & 0x0F;
+
+        // x=0, y=2, n=F
+        // println!("{:?}", self.mem[(self.index as usize)..n as usize +1]);
+        // println!("{:?}", res);
+        // println!("x: {:X}, y: {:X}, n: {:X}", x, y, n);
+        let mut bin: u8 = 0;
+        // println!("{:B}", x);
+
+        for i in 0..n+1 {
+            bin = bin ^ self.mem[self.index as usize + i as usize];
+            println!("0x{:b}", bin);
+        }
+        self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;         
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;     
     }
     fn set_vs_to_delay_timer_val(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;  
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;  
     }
     fn set_delay_timer_to_vx(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn set_sound_timer_to_vx(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn increment_index_register_by_vx(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
-
+        println!("Not Implemented.");
+        self.pc +=2;
     }
     fn store_registers_through_vx(&mut self) {
+        let opcode = self.opcode;
+        let shifted = opcode >> 8 & 0x0F;
+        let value = shifted as usize;
+        let index = self.index as usize;
 
+        for i in 0..value + 1 {
+            self.mem[index + i] = self.regs[i];
+        }
+        self.pc += 2
     }
     fn read_registers_through_vx(&mut self) {
+        // read memory self.mem[self.index : PLx] into registers starting at 0
+        let opcode = self.opcode;
+        let shifted = opcode >> 8 & 0x0F;
+        let value = shifted as usize;
+        let index = self.index as usize;
 
+        for i in 0..value + 1{
+            self.regs[i] = self.mem[index + i];
+        }
+        self.pc += 2
     }
 }
 
