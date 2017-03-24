@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
+use display::Display;
 use ::DEBUG;
 
 
@@ -13,8 +14,8 @@ pub struct CPU {
     pub sp: u8,
     pub opcode: u16,
     pub pc: u16,
+    pub display: Display,
 }
-
 
 impl CPU {
     pub fn new() -> CPU {
@@ -25,7 +26,8 @@ impl CPU {
             stack: [0; 16],
             sp: 0, // Pointer to the topmost of the stack
             opcode: 0,
-            pc: 0x200
+            pc: 0x200,
+            display: Display::new(),
         };
         cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
         cpu
@@ -41,6 +43,7 @@ impl CPU {
                 io::stdin().read_line(&mut s).unwrap();
             }
             self.cycle();
+            self.display.draw();
         }
     }
     pub fn cycle(&mut self) {
@@ -252,18 +255,14 @@ impl CPU {
         let x = self.opcode >> 8 & 0x0F;
         let y = self.opcode >> 4 & 0x0F;
         let n = self.opcode & 0x0F;
-
-        // x=0, y=2, n=F
-        // println!("{:?}", self.mem[(self.index as usize)..n as usize +1]);
-        // println!("{:?}", res);
-        // println!("x: {:X}, y: {:X}, n: {:X}", x, y, n);
-        let mut bin: u8 = 0;
-        // println!("{:B}", x);
+        let mut flag = false;
 
         for i in 0..n+1 {
-            bin = bin ^ self.mem[self.index as usize + i as usize];
-            println!("0x{:b}", bin);
-        }
+            let byte = self.mem[self.index as usize + i as usize];
+            let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
+            flag = flag || res;
+        };
+        self.display.draw();
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {

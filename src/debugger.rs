@@ -1,6 +1,8 @@
 use std::io;
 
 use cpu::CPU;
+use opcodes::parse_opcode;
+
 
 pub struct Debugger {
 	cpu: CPU,
