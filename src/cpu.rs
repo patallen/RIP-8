@@ -113,12 +113,11 @@ impl CPU {
     }
     fn return_from_sub(&mut self) {
         self.pc = self.stack[self.sp as usize];
-        self.sp -=1;
+        self.sp -= 1;
         self.pc += 2;
     }
     fn clear_display(&mut self) {
-        println!("Not Implemented.");
-        self.pc +=2;
+        self.display.clear();
         self.pc += 2;
     }
     fn jump_to_location(&mut self) {

@@ -59,6 +59,9 @@ impl Display {
 			}
 		}
 	}
+	pub fn clear(&mut self) {
+		self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT]
+	}
 }
 
 #[test]
