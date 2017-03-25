@@ -135,7 +135,7 @@ impl CPU {
     }
     fn system_address_jump(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn return_from_sub(&mut self) {
         self.pc = self.stack[self.sp as usize];
@@ -228,27 +228,27 @@ impl CPU {
     }
     fn increment_vx_by_vy_carry(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn set_index_register_to_pl(&mut self) {
         let opcode = self.opcode;
@@ -257,11 +257,11 @@ impl CPU {
     }
     fn jump_to_v0_plus_pl(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
         // Dxyn - DRW Vx, Vy, nibble
@@ -282,24 +282,26 @@ impl CPU {
             let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
             flag = flag || res;
         };
+
         match flag {
             true => self.regs[0xF] = 1,
             false => self.regs[0xF] = 0,
         }
+
         self.display.draw();
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;         
+        self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;     
+        self.pc += 2;
     }
     fn set_vs_to_delay_timer_val(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;  
+        self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
         let idx = self.opcode >> 8 & 0x0F;
@@ -308,16 +310,16 @@ impl CPU {
     }
     fn set_delay_timer_to_vx(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
         println!("Not Implemented.");
-        self.pc +=2;
+        self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
         let idx = self.opcode >> 8 & 0x0F;
         self.index += self.regs[idx as usize] as u16;
-        self.pc +=2;
+        self.pc += 2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
         let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
@@ -360,9 +362,9 @@ pub fn get_sub_arr(arr: &[u8; 4096], start: usize) -> [u8; 8] {
     list
 }
 
-pub fn print_sprite(arr: &[u8; 4096], start: usize) {
+pub fn print_sprite(arr: &[u8; 4096], start: usize, no_bytes: usize) {
     let mut list: [u8; 8] = [0; 8];
-    for i in 0..8 {
+    for i in 0..no_bytes {
         println!("{:b}", arr[i + start]);
     }
 }
