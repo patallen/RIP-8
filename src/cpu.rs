@@ -336,6 +336,13 @@ pub fn get_sub_arr(arr: &[u8; 4096], start: usize) -> [u8; 8] {
     list
 }
 
+pub fn print_sprite(arr: &[u8; 4096], start: usize) {
+    let mut list: [u8; 8] = [0; 8];
+    for i in 0..8 {
+        println!("{:b}", arr[i + start]);
+    }
+}
+
 #[test]
 pub fn test_run_operation_for_goto() {
     // opcode = 0x10 << 8 | 0xF0 = 0x10F0
