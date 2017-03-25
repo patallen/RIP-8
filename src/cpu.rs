@@ -320,9 +320,9 @@ impl CPU {
         self.pc +=2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
-        let x = self.opcode >> 8 & 0xF;
-        self.index = 80 + (x * 8);
-        self.pc +=2;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        self.index = (vx * 5) as u16;
+        self.pc += 2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
         println!("Not Implemented.");
