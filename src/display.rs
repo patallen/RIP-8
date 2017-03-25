@@ -34,7 +34,7 @@ impl Display {
 			if i + start > limit {
 				break;
 			}
-			let current = self.pixels[i];
+			let current = self.pixels[i + start];
 			self.pixels[i + start] = current ^ bit;
 			modified = modified || self.pixels[i + start] == current;
 		}
@@ -54,8 +54,8 @@ impl Display {
 		print!("\n");
 		for x in 0..SCREEN_PIXELS {
 			let pixel = match self.pixels[x] {
-				1 => "# ",
-				_ => "_ ",
+				1 => "#",
+				_ => " ",
 			};
 			print!("{} ", pixel);
 			if (x + 1) % SCREEN_WIDTH == 0 {
