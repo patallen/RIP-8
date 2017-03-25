@@ -203,9 +203,9 @@ impl CPU {
         self.pc += 2
     }
     fn set_vx_to_vy(&mut self) {
-        let x = self.opcode << 8 & 0xF;
-        let y = self.opcode << 4 & 0xF;
-        self.regs[x as usize] = self.mem[y as usize] as u8;
+        let x = self.opcode >> 8 & 0xF;
+        let y = self.opcode >> 4 & 0xF;
+        self.regs[x as usize] = self.regs[y as usize] as u8;
         self.pc += 2;
     }
     fn set_vx_to_vx_or_vy(&mut self) {
