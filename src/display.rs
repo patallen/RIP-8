@@ -53,7 +53,11 @@ impl Display {
 	pub fn draw(&self) {
 		print!("\n");
 		for x in 0..SCREEN_PIXELS {
-			print!("{:?} ", self.pixels[x]);
+			let pixel = match self.pixels[x] {
+				1 => "# ",
+				_ => "_ ",
+			};
+			print!("{} ", pixel);
 			if (x + 1) % SCREEN_WIDTH == 0 {
 				print!("\n");
 			}
@@ -62,6 +66,16 @@ impl Display {
 	pub fn clear(&mut self) {
 		self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT]
 	}
+}
+
+
+pub fn get_sub_arr(arr: &[u8; 2048], x: usize, y: usize) -> [u8; 8] {
+	let start = x + (y * 64);
+	let mut list: [u8; 8] = [0; 8];
+	for i in 0..8 {
+		list[i] = arr[i + start];
+	}
+	list
 }
 
 #[test]
@@ -75,12 +89,15 @@ fn test_byte_to_digits() {
 
 #[test]
 fn test_write_byte() {
+	let x = 0;
+	let y = 0;
+	let byte = 0b10101010;
 	let mut disp = Display::new();
-	let res = disp.write_byte(0b10101010, 0, 0);
+	let res = disp.write_byte(byte, x, y);
+
+	let arr: [u8; 8] = get_sub_arr(&disp.pixels, x, y);
 	assert_eq!(res, true);
-	for (i, x) in [1, 0, 1, 0, 1, 0, 1, 0].into_iter().enumerate() {
-		assert_eq!(disp.pixels[i], *x as u8);
-	}
+	assert_eq!(arr, [1, 0, 1, 0, 1, 0, 1, 0])
 }
 
 #[test]
