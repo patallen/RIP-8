@@ -197,9 +197,15 @@ impl CPU {
         self.pc += 2;
     }
     fn increment_vx_by_pl(&mut self) {
-        let x = self.opcode >> 8 & 0xF;
-        let pl = self.opcode & 0x00FF;
-        self.regs[x as usize] += pl as u8;
+        let x = (self.opcode >> 8 & 0xF) as usize;
+        let pl = (self.opcode & 0x00FF) as u16;
+
+        let mut val = self.regs[x] as u16 + pl;
+        if val > 255 {
+            val = val - (val / 256 * 256) + 1;
+        }
+
+        self.regs[x] = val as u8;
         self.pc += 2
     }
     fn set_vx_to_vy(&mut self) {
