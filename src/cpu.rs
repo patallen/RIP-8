@@ -136,51 +136,46 @@ impl CPU {
         self.pc = code & 0x0FFF;
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
-        let x = self.opcode << 8 & 0xFF;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
         let nn = self.opcode & 0x00FF;
 
-        match x {
-            n => self.pc += 2,
-            _ => {}
+        if vx == nn as u8 {
+            self.pc += 2;
         }
+
         self.pc += 2;
     }
     fn skip_instr_if_vx_neq_pl(&mut self) {
-        // "0x4xnn"
-        let x = self.opcode << 8 & 0xFF;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
         let nn = self.opcode & 0x00FF;
 
-        match x {
-            n => {},
-            _ => self.pc += 2
+        if vx != nn as u8 {
+            self.pc += 2;
         }
+
         self.pc += 2;
     }
     fn skip_instr_if_vx_eq_vy(&mut self) {
-        let x = self.opcode << 8 & 0xFF;
-        let y = self.opcode << 4 & 0xF;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
 
-        match x {
-            y => self.pc += 2,
-            _ => {}
+        if vx == vy {
+            self.pc += 2;
         }
         self.pc += 2;
     }
     fn set_vx_to_pl(&mut self) {
         // 0x6xkk - set vx equal to kk
-        let opcode = self.opcode;
-        let kk = opcode & 0x00FF;
-        let x = opcode >> 8 & 0x0F;
-
-        println!("KK: {:X}, X: {:X}", kk, x);
+        let kk = self.opcode & 0x00FF;
+        let x = self.opcode >> 8 & 0x0F;
 
         self.regs[x as usize] = kk as u8;
         self.pc += 2;
     }
     fn increment_vx_by_pl(&mut self) {
-        let x = self.opcode << 8 & 0xF;
+        let x = self.opcode >> 8 & 0xF;
         let pl = self.opcode & 0x00FF;
-        self.regs[x as usize] = pl as u8;
+        self.regs[x as usize] += pl as u8;
         self.pc += 2
     }
     fn set_vx_to_vy(&mut self) {
@@ -253,16 +248,20 @@ impl CPU {
         // onto the existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise
         // it is set to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
         // it wraps around to the opposite side of the screen. 
-        let x = self.opcode >> 8 & 0x0F;
-        let y = self.opcode >> 4 & 0x0F;
+        let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
         let n = self.opcode & 0x0F;
         let mut flag = false;
 
-        for i in 0..n+1 {
+        for i in 0..n {
             let byte = self.mem[self.index as usize + i as usize];
             let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
             flag = flag || res;
         };
+        match flag {
+            true => self.regs[0xF] = 1,
+            false => self.regs[0xF] = 0,
+        }
         self.display.draw();
         self.pc += 2;
     }
@@ -279,8 +278,9 @@ impl CPU {
         self.pc +=2;  
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
-        println!("Not Implemented.");
-        self.pc +=2;  
+        let idx = self.opcode >> 8 & 0x0F;
+        self.regs[idx as usize] = 10;
+        self.pc += 2;
     }
     fn set_delay_timer_to_vx(&mut self) {
         println!("Not Implemented.");
@@ -291,11 +291,13 @@ impl CPU {
         self.pc +=2;
     }
     fn increment_index_register_by_vx(&mut self) {
-        println!("Not Implemented.");
+        let idx = self.opcode >> 8 & 0x0F;
+        self.index += self.regs[idx as usize] as u16;
         self.pc +=2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
-        println!("Not Implemented.");
+        let x = self.opcode >> 8 & 0xF;
+        self.index = 80 + (x * 8);
         self.pc +=2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
@@ -303,15 +305,14 @@ impl CPU {
         self.pc +=2;
     }
     fn store_registers_through_vx(&mut self) {
-        let opcode = self.opcode;
-        let shifted = opcode >> 8 & 0x0F;
-        let value = shifted as usize;
-        let index = self.index as usize;
+        let x = self.opcode >> 8 & 0x0F;;
 
-        for i in 0..value + 1 {
-            self.mem[index + i] = self.regs[i];
+        for i in 0..x + 1 {
+            let ii = i as usize;
+            self.mem[self.index as usize + ii as usize] = self.regs[ii];
         }
-        self.pc += 2
+        self.index = self.index + x;
+        self.pc += 2;
     }
     fn read_registers_through_vx(&mut self) {
         // read memory self.mem[self.index : PLx] into registers starting at 0
@@ -323,8 +324,16 @@ impl CPU {
         for i in 0..value + 1{
             self.regs[i] = self.mem[index + i];
         }
-        self.pc += 2
+        self.pc += 2;
     }
+}
+
+pub fn get_sub_arr(arr: &[u8; 4096], start: usize) -> [u8; 8] {
+    let mut list: [u8; 8] = [0; 8];
+    for i in 0..8 {
+        list[i] = arr[i + start];
+    }
+    list
 }
 
 #[test]
