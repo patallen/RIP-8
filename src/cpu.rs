@@ -327,8 +327,15 @@ impl CPU {
         self.pc += 2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
-        println!("Not Implemented.");
-        self.pc +=2;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let hunds = vx / 100 * 100;
+        let tens = (vx - hunds) / 10 * 10;
+        let ones = (vx - hunds - tens);
+        self.mem[self.index as usize] = hunds / 100;
+        self.mem[self.index as usize + 1] = tens / 10;
+        self.mem[self.index as usize + 2] = ones;
+
+        self.pc += 2;
     }
     fn store_registers_through_vx(&mut self) {
         let x = self.opcode >> 8 & 0x0F;;
