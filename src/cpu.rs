@@ -22,7 +22,7 @@ impl CPU {
         let mut cpu = CPU {
             mem: [0; 4096],
             regs: [0; 16],
-            index: 0,
+            index: 0x200,
             stack: [0; 16],
             sp: 0, // Pointer to the topmost of the stack
             opcode: 0,
@@ -33,17 +33,19 @@ impl CPU {
         cpu
     }
     pub fn run(&mut self) {
+        // self.set_fonts();
         loop {
             self.opcode = self.opcode_at_address(self.pc as usize);
             if DEBUG {
                 let inst = parse_opcode(self.opcode).unwrap();
                 println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-                println!("{:?}", self.regs);
+                println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+
                 let mut s = String::new();
                 io::stdin().read_line(&mut s).unwrap();
             }
             self.cycle();
-            self.display.draw();
+            // self.display.draw();
         }
     }
     pub fn cycle(&mut self) {
