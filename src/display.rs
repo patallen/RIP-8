@@ -1,5 +1,3 @@
-extern crate sdl2;
-
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
