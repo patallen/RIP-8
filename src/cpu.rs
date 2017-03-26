@@ -7,9 +7,15 @@ use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
 use device::Device;
 
-use ::{DEBUG, DEBUG_CHUNK};
+use ::{DEBUG, DEBUG_CHUNK, DO_CHUNK_DEBUG};
 
-
+#[derive(PartialEq)]
+enum DebugMode {
+    Off,
+    Chunk,
+    Step,
+    Stream,
+}
 pub struct CPU<'cpu> {
     pub mem: [u8; 4096],
     pub regs: [u8; 16],
@@ -19,6 +25,8 @@ pub struct CPU<'cpu> {
     pub opcode: u16,
     pub pc: u16,
     pub device: Device<'cpu>,
+    debug_mode: DebugMode,
+    debug_chunk: u16,
 }
 
 const FONT_SET: [u8; 80] = [
@@ -51,6 +59,8 @@ impl<'cpu> CPU <'cpu>{
             sp:     0, // Pointer to the topmost of the stack
             pc:     0x200,
             device: Device::new(),
+            debug_mode: DebugMode::Stream,
+            debug_chunk: DEBUG_CHUNK,
         };
         cpu.set_fonts();
         cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
@@ -63,16 +73,28 @@ impl<'cpu> CPU <'cpu>{
             if self.device.quit {
                 break;
             }
+            if self.device.debug_break {
+                self.debug_mode = DebugMode::Step;
+            } else if self.device.debug_chunk {
+                    self.debug_mode = DebugMode::Chunk;
+            };
             self.opcode = self.opcode_at_address(self.pc as usize);
-            if DEBUG {
+            if self.debug_mode != DebugMode::Off {
                 let inst = parse_opcode(self.opcode).unwrap();
                 println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
                 println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
-                count += 1;
-                if count >= DEBUG_CHUNK {
-                    let mut s = String::new();
-                    io::stdin().read_line(&mut s).unwrap();
-                    count = 0;
+
+                match self.debug_mode {
+                    DebugMode::Step | DebugMode::Chunk => {
+                        if self.debug_mode == DebugMode::Step || (count >= self.debug_chunk) {
+                            let mut s = String::new();
+                            io::stdin().read_line(&mut s).unwrap();
+                            count = 0;
+                        }
+                        count += 1;
+
+                    },
+                    _ => {},
                 }
             }
             self.cycle();

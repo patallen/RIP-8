@@ -1,18 +1,20 @@
 extern crate sdl2;
 
 use self::sdl2::EventPump;
-use self::sdl2::event::Event::{KeyUp, KeyDown, Quit};
+use self::sdl2::event::Event;
 use self::sdl2::render::Renderer;
-
+use self::sdl2::keyboard::Keycode;
 use keyboard::Keyboard;
 use display::Display;
 
 
 pub struct Device<'d> {
     display: Display<'d> ,
-    keyboard: Keyboard,
+    pub keyboard: Keyboard,
     pump: EventPump,
     pub quit: bool,
+    pub debug_break: bool,
+    pub debug_chunk: bool,
 }
 
 
@@ -25,19 +27,23 @@ impl<'d> Device<'d> {
             display: Display::new(context),
             keyboard: Keyboard::new(),
             pump: pump,
-            quit: false
+            quit: false,
+            debug_break: false,
+            debug_chunk: false,
         }
     }
     pub fn pump(&mut self) {
         for event in self.pump.poll_iter() {
             match event {
-                KeyDown { .. } => self.keyboard.handle_event(event),
-                KeyUp { .. } => self.keyboard.handle_event(event),
-                Quit { .. } => self.quit = true,
+                Event::KeyDown { keycode, .. } => match keycode {
+                    Some(Keycode::B) => self.debug_break = !self.debug_break,
+                    Some(Keycode::C) => self.debug_chunk = !self.debug_chunk,
+                    Some(Keycode::Escape) => self.quit = true,
+                    _ => self.keyboard.handle_event(event)
+                },
+                Event::KeyUp { .. } => self.keyboard.handle_event(event),
+                Event::Quit { .. } => self.quit = true,
                 _ => {}
-            }
-            if self.keyboard.escape {
-                self.quit = true
             }
         }
     }
