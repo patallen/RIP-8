@@ -2,9 +2,10 @@ mod cpu;
 mod debugger;
 mod opcodes;
 mod display;
+mod keyboard;
+
 
 use cpu::CPU;
-use debugger::Debugger;
 
 pub const DEBUG: bool = true;
 

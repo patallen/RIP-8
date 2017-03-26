@@ -1,14 +1,16 @@
 extern crate rand;
+extern crate sdl2;
 
 use std::fs::File;
 use std::io::{self, Read};
 use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
-use display::Display;
+use display::Device;
+
 use ::DEBUG;
 
 
-pub struct CPU {
+pub struct CPU<'cpu> {
     pub mem: [u8; 4096],
     pub regs: [u8; 16],
     pub index: u16,
@@ -16,7 +18,7 @@ pub struct CPU {
     pub sp: u8,
     pub opcode: u16,
     pub pc: u16,
-    pub display: Display,
+    pub device: Device<'cpu>,
 }
 
 const FONT_SET: [u8; 80] = [
@@ -38,35 +40,38 @@ const FONT_SET: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
 
-impl CPU {
-    pub fn new() -> CPU {
+impl<'cpu> CPU <'cpu>{
+    pub fn new() -> CPU<'cpu> {
         let mut cpu = CPU {
-            mem: [0; 4096],
-            regs: [0; 16],
-            index: 0x200,
-            stack: [0; 16],
-            sp: 0, // Pointer to the topmost of the stack
+            mem:    [0; 4096],
+            regs:   [0; 16],
+            stack:  [0; 16],
+            index:  0x200,
             opcode: 0,
-            pc: 0x200,
-            display: Display::new(),
+            sp:     0, // Pointer to the topmost of the stack
+            pc:     0x200,
+            device: Device::new(),
         };
+        cpu.set_fonts();
         cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
         cpu
     }
     pub fn run(&mut self) {
-        self.set_fonts();
         loop {
-            self.opcode = self.opcode_at_address(self.pc as usize);
-            if DEBUG {
-                let inst = parse_opcode(self.opcode).unwrap();
-                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-                println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
-
-                let mut s = String::new();
-                io::stdin().read_line(&mut s).unwrap();
+            self.device.pump();
+            if self.device.quit {
+                break;
             }
+            self.opcode = self.opcode_at_address(self.pc as usize);
+            // if DEBUG {
+            //     let inst = parse_opcode(self.opcode).unwrap();
+            //     println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
+            //     println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+
+            //     // let mut s = String::new();
+            //     // io::stdin().read_line(&mut s).unwrap();
+            // }
             self.cycle();
-            // self.display.draw();
         }
     }
     pub fn cycle(&mut self) {
@@ -136,7 +141,7 @@ impl CPU {
         }
     }
     fn system_address_jump(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn return_from_sub(&mut self) {
@@ -145,7 +150,7 @@ impl CPU {
         self.pc += 2;
     }
     fn clear_display(&mut self) {
-        self.display.clear();
+        // self.device.clear_display();
         self.pc += 2;
     }
     fn jump_to_location(&mut self) {
@@ -191,7 +196,6 @@ impl CPU {
         self.pc += 2;
     }
     fn set_vx_to_pl(&mut self) {
-        // 0x6xkk - set vx equal to kk
         let kk = self.opcode & 0x00FF;
         let x = self.opcode >> 8 & 0x0F;
 
@@ -251,24 +255,23 @@ impl CPU {
         self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
-        println!("Not Implemented.");
-        self.pc += 2;
+        // println!("Not Implemented.");
     }
     fn set_index_register_to_pl(&mut self) {
         let opcode = self.opcode;
@@ -276,7 +279,7 @@ impl CPU {
         self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
@@ -294,35 +297,35 @@ impl CPU {
         // onto the existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise
         // it is set to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
         // it wraps around to the opposite side of the screen. 
-        let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
-        let n = self.opcode & 0x0F;
-        let mut flag = false;
+        // let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        // let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+        // let n = self.opcode & 0x0F;
+        // let mut flag = false;
 
-        for i in 0..n {
-            let byte = self.mem[self.index as usize + i as usize];
-            let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
-            flag = flag || res;
-        };
+        // for i in 0..n {
+        //     let byte = self.mem[self.index as usize + i as usize];
+        //     let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
+        //     flag = flag || res;
+        // };
 
-        match flag {
-            true => self.regs[0xF] = 1,
-            false => self.regs[0xF] = 0,
-        }
+        // match flag {
+        //     true => self.regs[0xF] = 1,
+        //     false => self.regs[0xF] = 0,
+        // }
 
-        self.display.draw();
+        // self.display.draw();
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
         println!("Not Implemented.");
-        self.pc += 2;
+        self.pc += 4;
     }
     fn set_vs_to_delay_timer_val(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
@@ -331,11 +334,11 @@ impl CPU {
         self.pc += 2;
     }
     fn set_delay_timer_to_vx(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
-        println!("Not Implemented.");
+        // println!("Not Implemented.");
         self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
