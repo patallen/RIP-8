@@ -1,12 +1,17 @@
 extern crate sdl2;
 
 use self::sdl2::render::Renderer;
-
+use self::sdl2::pixels::Color;
+use self::sdl2::rect::Rect;
+use self::sdl2::video::Window;
 
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
-
+const DISPLAY_WIDTH: usize = SCREEN_WIDTH * 20;
+const DISPLAY_HEIGHT: usize = SCREEN_HEIGHT * 20;
+const PIXEL_SIZE: usize = DISPLAY_HEIGHT / SCREEN_HEIGHT;
+const TITLE: &str = "RIP-8::CHIP-8";
 
 pub struct Display<'d> {
     pixels: [u8; SCREEN_PIXELS],
@@ -16,8 +21,13 @@ pub struct Display<'d> {
 }
 
 
-impl<'r, 'd: 'r> Display<'d> {
-    pub fn new(renderer: sdl2::render::Renderer<'d>) -> Display<'r> {
+impl<'d> Display<'d> {
+    pub fn new(context: sdl2::Sdl) -> Display<'d> {
+        let video = context.video().unwrap();
+        let window = video.window(TITLE, DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
+                          .position_centered().opengl().build().unwrap();
+        let mut renderer = window.renderer().accelerated()
+                             .build().unwrap();
         Display {
             width: SCREEN_WIDTH,
             height: SCREEN_HEIGHT,
@@ -51,24 +61,49 @@ impl<'r, 'd: 'r> Display<'d> {
         bytearr
     }
 
-    pub fn draw(&self) {
-        print!("\n");
-        for x in 0..SCREEN_PIXELS {
-            let pixel = match self.pixels[x] {
-                1 => "#",
-                _ => " ",
-            };
-            print!("{} ", pixel);
-            if (x + 1) % SCREEN_WIDTH == 0 {
-                print!("\n");
+    pub fn draw(&mut self) {
+        self.renderer.set_draw_color(Color::RGB(0, 0, 0));
+        self.renderer.clear();
+        self.renderer.set_draw_color(Color::RGB(255, 255, 255));
+        for (idx, p) in self.pixels.into_iter().enumerate() {
+            if *p > 0{
+                let x = idx - (idx / SCREEN_WIDTH * SCREEN_WIDTH);
+                let y = idx / SCREEN_WIDTH;
+                let pixel = Pixel::new(x, y);
+                self.renderer.fill_rect(pixel.to_sdl());
             }
         }
+        self.renderer.present();
     }
     pub fn clear(&mut self) {
-        self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT]
+        self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
     }
 }
 
+struct Pixel {
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+}
+
+impl Pixel {
+    pub fn new(x: usize, y: usize) -> Pixel {
+        Pixel {
+            x: x * PIXEL_SIZE,
+            y: y * PIXEL_SIZE,
+            w: PIXEL_SIZE,
+            h: PIXEL_SIZE,
+        }
+    }
+    fn to_sdl(self ) -> Rect {
+        let x = self.x as i32;
+        let y = self.y as i32;
+        let h = self.h as u32;
+        let w = self.w as u32;
+        Rect::new(x, y, h, w)
+    }
+}
 pub fn get_sub_arr(arr: &[u8; 2048], x: usize, y: usize) -> [u8; 8] {
     let start = x + (y * 64);
     let mut list: [u8; 8] = [0; 8];

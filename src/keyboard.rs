@@ -92,7 +92,5 @@ impl Keyboard {
             },
             _ => {}
         }
-        println!("{:?}", self);
     }
-
 }

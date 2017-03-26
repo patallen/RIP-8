@@ -19,15 +19,10 @@ pub struct Device<'d> {
 impl<'d> Device<'d> {
     pub fn new() -> Device<'d> {
         let context = sdl2::init().unwrap();
-        let video = context.video().unwrap();
-        let window = video.window("RIP-8 Emulator", 640, 320)
-                          .position_centered().opengl()
-                          .build().unwrap();
         let pump = context.event_pump().unwrap();
-        let renderer = window.renderer().accelerated()
-                             .build().unwrap();
+
         Device {
-            display: Display::new(renderer),
+            display: Display::new(context),
             keyboard: Keyboard::new(),
             pump: pump,
             quit: false
@@ -45,5 +40,14 @@ impl<'d> Device<'d> {
                 self.quit = true
             }
         }
+    }
+    pub fn write_byte(&mut self, byte: u8, x: usize, y:usize) -> bool {
+        self.display.write_byte(byte, x, y)
+    }
+    pub fn clear_display(&mut self) {
+        self.display.clear();
+    }
+    pub fn draw(&mut self) {
+        self.display.draw()
     }
 }
