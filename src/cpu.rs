@@ -1,3 +1,5 @@
+extern crate rand;
+
 use std::fs::File;
 use std::io::{self, Read};
 use std::collections::HashMap;
@@ -233,7 +235,19 @@ impl CPU {
         self.pc += 2;
     }
     fn increment_vx_by_vy_carry(&mut self) {
-        println!("Not Implemented.");
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let vx = self.regs[x];
+        let vy = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+
+        let mut val = vx + vy;
+        let mut carry = 0;
+        if val > 255 {
+            val = val - (val / 256 * 256) + 1;
+            carry = 1;
+        }
+        self.regs[x] = val;
+        self.regs[0xF] = carry as u8;
+
         self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
@@ -266,7 +280,9 @@ impl CPU {
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
-        println!("Not Implemented.");
+        let random: u8 = rand::random();
+        let pl = self.opcode & 0x00FF;
+        self.regs[(self.opcode >> 8 & 0x0F) as usize] = random & pl as u8;
         self.pc += 2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
