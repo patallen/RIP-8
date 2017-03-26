@@ -1,8 +1,8 @@
 mod cpu;
-mod debugger;
-mod opcodes;
+mod device;
 mod display;
 mod keyboard;
+mod opcodes;
 
 
 use cpu::CPU;

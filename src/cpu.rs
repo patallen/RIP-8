@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
-use display::Device;
+use device::Device;
 
 use ::DEBUG;
 
@@ -63,14 +63,14 @@ impl<'cpu> CPU <'cpu>{
                 break;
             }
             self.opcode = self.opcode_at_address(self.pc as usize);
-            // if DEBUG {
-            //     let inst = parse_opcode(self.opcode).unwrap();
-            //     println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-            //     println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+            if DEBUG {
+                let inst = parse_opcode(self.opcode).unwrap();
+                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
+                println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
 
-            //     // let mut s = String::new();
-            //     // io::stdin().read_line(&mut s).unwrap();
-            // }
+                // let mut s = String::new();
+                // io::stdin().read_line(&mut s).unwrap();
+            }
             self.cycle();
         }
     }
@@ -272,6 +272,7 @@ impl<'cpu> CPU <'cpu>{
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
         // println!("Not Implemented.");
+        self.pc += 4; // TODO: Change this
     }
     fn set_index_register_to_pl(&mut self) {
         let opcode = self.opcode;

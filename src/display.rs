@@ -1,23 +1,12 @@
 extern crate sdl2;
 
-use self::sdl2::EventPump;
-use self::sdl2::event::Event::{KeyUp, KeyDown, Quit};
 use self::sdl2::render::Renderer;
-
-
-use keyboard::Keyboard;
 
 
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
-pub struct Device<'d> {
-    display: Display<'d> ,
-    keyboard: Keyboard,
-    pump: EventPump,
-    pub quit: bool,
-}
 
 pub struct Display<'d> {
     pixels: [u8; SCREEN_PIXELS],
@@ -26,37 +15,6 @@ pub struct Display<'d> {
     renderer: Renderer<'d>,
 }
 
-impl<'d> Device<'d> {
-    pub fn new() -> Device<'d> {
-        let context = sdl2::init().unwrap();
-        let video = context.video().unwrap();
-        let window = video.window("RIP-8 Emulator", 640, 320)
-                          .position_centered().opengl()
-                          .build().unwrap();
-        let pump = context.event_pump().unwrap();
-        let renderer = window.renderer().accelerated()
-                             .build().unwrap();
-        Device {
-            display: Display::new(renderer),
-            keyboard: Keyboard::new(),
-            pump: pump,
-            quit: false
-        }
-    }
-    pub fn pump(&mut self) {
-        for event in self.pump.poll_iter() {
-            match event {
-                KeyDown { .. } => self.keyboard.handle_event(event),
-                KeyUp { .. } => self.keyboard.handle_event(event),
-                Quit { .. } => self.quit = true,
-                _ => {}
-            }
-            if self.keyboard.escape {
-                self.quit = true
-            }
-        }
-    }
-}
 
 impl<'r, 'd: 'r> Display<'d> {
     pub fn new(renderer: sdl2::render::Renderer<'d>) -> Display<'r> {
@@ -110,7 +68,6 @@ impl<'r, 'd: 'r> Display<'d> {
         self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT]
     }
 }
-
 
 pub fn get_sub_arr(arr: &[u8; 2048], x: usize, y: usize) -> [u8; 8] {
     let start = x + (y * 64);
