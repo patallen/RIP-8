@@ -236,16 +236,16 @@ impl CPU {
     }
     fn increment_vx_by_vy_carry(&mut self) {
         let x = (self.opcode >> 8 & 0x0F) as usize;
-        let vx = self.regs[x];
-        let vy = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vx = self.regs[x] as u16;
+        let vy = self.regs[(self.opcode >> 8 & 0x0F) as usize] as u16;
 
-        let mut val = vx + vy;
+        let mut val: u16 = vx + vy;
         let mut carry = 0;
         if val > 255 {
             val = val - (val / 256 * 256) + 1;
             carry = 1;
         }
-        self.regs[x] = val;
+        self.regs[x] = val as u8;
         self.regs[0xF] = carry as u8;
 
         self.pc += 2;
