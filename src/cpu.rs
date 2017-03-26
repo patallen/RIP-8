@@ -164,7 +164,7 @@ impl<'cpu> CPU <'cpu>{
             OpCode::DisplaySpriteSetVfColl_0xDXYN   =>  self.display_sprite_set_vf_collision(),
             OpCode::SkipInstrIfVxPressed_0xEX9E     =>  self.skip_instr_if_vx_pressed(),
             OpCode::SkipInstrIfVxNotPressed_0xEXA1  =>  self.skip_instr_if_vx_not_pressed(),
-            OpCode::SetVxToDelayTimerVal_0xFX07     =>  self.set_vs_to_delay_timer_val(),
+            OpCode::SetVxToDelayTimerVal_0xFX07     =>  self.set_vx_to_delay_timer_val(),
             OpCode::WaitForKeyStoreInVx_0xFX0A      =>  self.wait_for_key_and_store_in_vx(),
             OpCode::SetDelayTimerToVx_0xFX15        =>  self.set_delay_timer_to_vx(),
             OpCode::SetSoundTimerToVx_0xFX18        =>  self.set_sound_timer_to_vx(),
@@ -357,21 +357,22 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
-        println!("Not Implemented.");
-        self.pc += 4;
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        if !self.device.keyboard.check_value_pressed(vx) {
+            self.pc += 2;
+        }
+        self.pc += 2;
     }
     fn set_vx_to_delay_timer_val(&mut self) {
         self.regs[(self.opcode >> 8 & 0x0F) as usize] = self.delay_timer.get_delay();
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
-        let key_value: u8 = 0;
-        let mut vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
         match self.device.keyboard.get_pressed_key() {
             Some(value) => {
-                vx = value;
+                let x = (self.opcode >> 8 & 0xF) as usize;
+                self.regs[x] = value;
                 self.pc += 2;
-                self.debug_mode = DebugMode::Step;
             }
             None => {}
         }

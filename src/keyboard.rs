@@ -164,4 +164,12 @@ impl Keyboard {
         }
         return None
     }
+    pub fn check_value_pressed(&mut self, value: u8) -> bool {
+        for key in self.keys().into_iter() {
+            if key.value() == value {
+                return key.is_pressed()
+            }
+        }
+        return false
+    }
 }
