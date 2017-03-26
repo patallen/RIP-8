@@ -154,7 +154,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn clear_display(&mut self) {
-        // self.device.clear_display();
+        self.device.clear_display();
         self.pc += 2;
     }
     fn jump_to_location(&mut self) {
@@ -302,23 +302,23 @@ impl<'cpu> CPU <'cpu>{
         // onto the existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise
         // it is set to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
         // it wraps around to the opposite side of the screen. 
-        // let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        // let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
-        // let n = self.opcode & 0x0F;
-        // let mut flag = false;
+        let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+        let n = self.opcode & 0x0F;
+        let mut flag = false;
 
-        // for i in 0..n {
-        //     let byte = self.mem[self.index as usize + i as usize];
-        //     let res = self.display.write_byte(byte, x as usize, y as usize + i as usize);
-        //     flag = flag || res;
-        // };
+        for i in 0..n {
+            let byte = self.mem[self.index as usize + i as usize];
+            let res = self.device.write_byte(byte, x as usize, y as usize + i as usize);
+            flag = flag || res;
+        };
 
-        // match flag {
-        //     true => self.regs[0xF] = 1,
-        //     false => self.regs[0xF] = 0,
-        // }
+        match flag {
+            true => self.regs[0xF] = 1,
+            false => self.regs[0xF] = 0,
+        }
 
-        // self.display.draw();
+        self.device.draw();
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
