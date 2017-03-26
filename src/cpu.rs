@@ -167,7 +167,7 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     fn system_address_jump(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn return_from_sub(&mut self) {
@@ -281,23 +281,23 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 4; // TODO: Change this
     }
     fn set_index_register_to_pl(&mut self) {
@@ -306,7 +306,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
@@ -344,7 +344,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
@@ -352,7 +352,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 4;
     }
     fn set_vs_to_delay_timer_val(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
@@ -361,11 +361,11 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn set_delay_timer_to_vx(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
-        // println!("Not Implemented.");
+        println!("Not Implemented.");
         self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
