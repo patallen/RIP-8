@@ -356,9 +356,17 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
-        let idx = self.opcode >> 8 & 0x0F;
-        self.regs[idx as usize] = 10;
-        self.pc += 2;
+        let key_value: u8 = 0;
+        let mut vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        match self.device.keyboard.get_pressed_key() {
+            Some(value) => {
+                vx = value;
+                self.pc += 2;
+                self.debug_mode = DebugMode::Step;
+            }
+            None => {}
+        }
+
     }
     fn set_delay_timer_to_vx(&mut self) {
         println!("Not Implemented.");
