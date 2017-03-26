@@ -6,6 +6,8 @@ use std::io::{self, Read};
 use std::collections::HashMap;
 use opcodes::{parse_opcode, OpCode};
 use device::Device;
+use utils::Timer;
+
 
 use ::{DEBUG, DEBUG_CHUNK, DO_CHUNK_DEBUG};
 
@@ -25,6 +27,8 @@ pub struct CPU<'cpu> {
     pub opcode: u16,
     pub pc: u16,
     pub device: Device<'cpu>,
+    delay_timer: Timer,
+    program_timer: Timer,
     debug_mode: DebugMode,
     debug_chunk: u16,
 }
@@ -58,6 +62,8 @@ impl<'cpu> CPU <'cpu>{
             opcode: 0,
             sp:     0, // Pointer to the topmost of the stack
             pc:     0x200,
+            delay_timer: Timer::new(16_666_667),
+            program_timer: Timer::new(2_000_000),
             device: Device::new(),
             debug_mode: DebugMode::Stream,
             debug_chunk: DEBUG_CHUNK,
@@ -69,6 +75,8 @@ impl<'cpu> CPU <'cpu>{
     pub fn run(&mut self) {
         let mut count: u16 = 0;
         loop {
+            self.delay_timer.touch();
+            self.program_timer.touch();
             self.device.pump();
             if self.device.quit {
                 break;
@@ -97,12 +105,13 @@ impl<'cpu> CPU <'cpu>{
                     _ => {},
                 }
             }
-            self.cycle();
+            if self.program_timer.get_delay() == 0 {
+                self.cycle();
+            }
         }
     }
     pub fn cycle(&mut self) {
         let inst = parse_opcode(self.opcode);
-
         match inst {
             Ok(code) => self.run_opcode_instruction(code),
             Err(e) => panic!("{}", e),
@@ -351,8 +360,8 @@ impl<'cpu> CPU <'cpu>{
         println!("Not Implemented.");
         self.pc += 4;
     }
-    fn set_vs_to_delay_timer_val(&mut self) {
-        println!("Not Implemented.");
+    fn set_vx_to_delay_timer_val(&mut self) {
+        self.regs[(self.opcode >> 8 & 0x0F) as usize] = self.delay_timer.get_delay();
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
@@ -369,7 +378,10 @@ impl<'cpu> CPU <'cpu>{
 
     }
     fn set_delay_timer_to_vx(&mut self) {
-        println!("Not Implemented.");
+        // 0xFx15
+        let x = self.opcode >> 8 & 0x0F;
+        let vx = self.regs[x as usize];
+        self.delay_timer.set_delay(vx);
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
