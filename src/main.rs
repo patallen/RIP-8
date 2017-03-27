@@ -3,6 +3,8 @@ mod device;
 mod display;
 mod keyboard;
 mod opcodes;
+mod utils;
+
 
 use std::env;
 use std::path::Path;

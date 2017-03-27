@@ -81,16 +81,19 @@ impl<'cpu> CPU <'cpu>{
             if self.device.quit {
                 break;
             }
+            // self.device.debug_break = true;
             if self.device.debug_break {
-                self.debug_mode = DebugMode::Step;
+              self.debug_mode = DebugMode::Step;
             } else if self.device.debug_chunk {
-                    self.debug_mode = DebugMode::Chunk;
-            };
+                self.debug_mode = DebugMode::Chunk;
+            };  
+
             self.opcode = self.opcode_at_address(self.pc as usize);
-            if self.debug_mode != DebugMode::Off {
+            if DEBUG && (self.debug_mode != DebugMode::Off) {
                 let inst = parse_opcode(self.opcode).unwrap();
                 println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-                println!("REGS: r0:{:x}|r1:{:x}|r2:{:x}|r3:{:x}|r4:{:x}|r5:{:x}|r6:{:x}|r7:{:x}|r8:{:x}|r9:{:x}|rA:{:x}|rB:{:x}|rC:{:x}|rD:{:x}|rE:{:x}|rF:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+                println!("REGS: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+                println!("STCK: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.stack[0], self.stack[1], self.stack[2], self.stack[3], self.stack[4], self.stack[5], self.stack[6], self.stack[7], self.stack[8], self.stack[9], self.stack[10], self.stack[11], self.stack[12], self.stack[13] , self.stack[14], self.stack[15]);
 
                 match self.debug_mode {
                     DebugMode::Step | DebugMode::Chunk => {
@@ -177,11 +180,12 @@ impl<'cpu> CPU <'cpu>{
     }
     fn system_address_jump(&mut self) {
         println!("Not Implemented.");
+
         self.pc += 2;
     }
     fn return_from_sub(&mut self) {
-        self.pc = self.stack[self.sp as usize];
         self.sp -= 1;
+        self.pc = self.stack[self.sp as usize];
         self.pc += 2;
     }
     fn clear_display(&mut self) {
@@ -197,8 +201,8 @@ impl<'cpu> CPU <'cpu>{
     }
     fn call_subroutine(&mut self) {
         let code = self.opcode;
-        self.sp += 1;
         self.stack[self.sp as usize] = self.pc;
+        self.sp += 1;
         self.pc = code & 0x0FFF;
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
@@ -256,21 +260,21 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn set_vx_to_vx_or_vy(&mut self) {
-        let x = (self.opcode << 8 & 0x0F) as usize;
-        let y = (self.opcode << 4 & 0xF) as usize;
-        self.mem[x] = self.mem[x] | self.mem[y];
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let y = (self.opcode >> 4 & 0xF) as usize;
+        self.regs[x] = self.regs[x] | self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_and_vy(&mut self) {
-        let x = (self.opcode << 8 & 0x0F) as usize;
-        let y = (self.opcode << 4 & 0xF) as usize;
-        self.mem[x] = self.mem[x] & self.mem[y];
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let y = (self.opcode >> 4 & 0xF) as usize;
+        self.regs[x] = self.regs[x] & self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_xor_vy(&mut self) {
-        let x = (self.opcode << 8 & 0x0F) as usize;
-        let y = (self.opcode << 4 & 0xF) as usize;
-        self.mem[x] = self.mem[x] ^ self.mem[y];
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let y = (self.opcode >> 4 & 0xF) as usize;
+        self.regs[x] = self.regs[x] ^ self.regs[y];
         self.pc += 2;
     }
     fn increment_vx_by_vy_carry(&mut self) {
