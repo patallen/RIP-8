@@ -203,14 +203,12 @@ impl<'cpu> CPU <'cpu>{
         // GOTO -> Set the PC to the specified address.
         // Doing so will make the interpreter pick up at this address
         // on the next cycle.
-        let code = self.opcode;
-        self.pc = code & 0x0FFF;
+        self.pc = self.opcode & 0x0FFF;
     }
     fn call_subroutine(&mut self) {
-        let code = self.opcode;
         self.stack[self.sp as usize] = self.pc;
         self.sp += 1;
-        self.pc = code & 0x0FFF;
+        self.pc = self.opcode & 0x0FFF;
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
         let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
@@ -336,7 +334,6 @@ impl<'cpu> CPU <'cpu>{
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
         println!("Not Implemented.");
-
         self.pc += 4; // TODO: Change this
     }
     fn set_index_register_to_pl(&mut self) {
@@ -346,7 +343,6 @@ impl<'cpu> CPU <'cpu>{
     }
     fn jump_to_v0_plus_pl(&mut self) {
         println!("Not Implemented.");
-        self.debug_mode = DebugMode::Chunk;
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
