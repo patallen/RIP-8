@@ -289,23 +289,47 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
-        println!("Not Implemented.");
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let vx = self.regs[x as usize];
+        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+
+        self.regs[0xF] = 0;
+        if vx > vy {
+            self.regs[0xF] = 1;
+        }
+        self.regs[x] = vx.wrapping_sub(vy);
+
         self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
-        println!("Not Implemented.");
+        let x = (self.opcode >> 8 &0x0F) as usize;
+        self.regs[0xF] = self.regs[x] & 1;
+        self.regs[x] = self.regs[x] >> 1;
+        // self.debug_mode = DebugMode::Step;
         self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
-        println!("Not Implemented.");
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let vx = self.regs[x as usize];
+        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+
+        self.regs[0xF] = 0;
+        if vy > vx {
+            self.regs[0xF] = 1;
+        }
+        self.regs[x] = vy.wrapping_sub(vx);
+
         self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
-        println!("Not Implemented.");
+        let x = (self.opcode >> 8 & 0x0F) as usize;
+        self.regs[0xF] = self.regs[x] >> 7;
+        self.regs[x] = self.regs[x].wrapping_add(self.regs[x]);
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
         println!("Not Implemented.");
+
         self.pc += 4; // TODO: Change this
     }
     fn set_index_register_to_pl(&mut self) {
@@ -416,7 +440,7 @@ impl<'cpu> CPU <'cpu>{
             let ii = i as usize;
             self.mem[self.index as usize + ii as usize] = self.regs[ii];
         }
-        self.index = self.index + x;
+        self.index = self.index + x - 1;
         self.pc += 2;
     }
     fn read_registers_through_vx(&mut self) {
@@ -426,7 +450,7 @@ impl<'cpu> CPU <'cpu>{
         let value = shifted as usize;
         let index = self.index as usize;
 
-        for i in 0..value + 1{
+        for i in 0..value + 1 {
             self.regs[i] = self.mem[index + i];
         }
         self.pc += 2;
