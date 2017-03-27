@@ -95,9 +95,12 @@ impl<'cpu> CPU <'cpu>{
             self.opcode = self.opcode_at_address(self.pc as usize);
             if DEBUG && (self.debug_mode != DebugMode::Off) {
                 let inst = parse_opcode(self.opcode).unwrap();
-                println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-                println!("REGS: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
-                println!("STCK: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.stack[0], self.stack[1], self.stack[2], self.stack[3], self.stack[4], self.stack[5], self.stack[6], self.stack[7], self.stack[8], self.stack[9], self.stack[10], self.stack[11], self.stack[12], self.stack[13] , self.stack[14], self.stack[15]);
+                if inst != OpCode::WaitForKeyStoreInVx_0xFX0A{
+                    println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
+                    println!("REGS: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
+                    println!("STCK: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.stack[0], self.stack[1], self.stack[2], self.stack[3], self.stack[4], self.stack[5], self.stack[6], self.stack[7], self.stack[8], self.stack[9], self.stack[10], self.stack[11], self.stack[12], self.stack[13] , self.stack[14], self.stack[15]);
+
+                }
 
                 match self.debug_mode {
                     DebugMode::Step | DebugMode::Chunk => {

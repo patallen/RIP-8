@@ -40,16 +40,19 @@ impl<'d> Display<'d> {
         let limit = (y+1) * SCREEN_WIDTH - 1;
         let start = x + y * SCREEN_WIDTH;
 
-        let mut modified = false;
+        let mut erased = false;
         for (i, bit) in bytearr.into_iter().enumerate() {
             if i + start > limit {
                 break;
             }
-            let current = self.pixels[i + start];
-            self.pixels[i + start] = current ^ bit;
-            modified = modified || self.pixels[i + start] == current;
+            let old = self.pixels[i + start];
+
+            self.pixels[i + start] = old ^ bit;
+            if old == 1 && self.pixels[i + start] != old {
+                erased = true
+            }
         }
-        modified
+        erased
     }
 
     fn byte_to_digits(&self, byte: u8) -> [u8; 8] {
