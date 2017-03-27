@@ -245,13 +245,8 @@ impl<'cpu> CPU <'cpu>{
         let x = (self.opcode >> 8 & 0xF) as usize;
         let pl = (self.opcode & 0x00FF) as u16;
 
-        let mut val = self.regs[x] as u16 + pl;
-        if val > 255 {
-            val = val - (val / 256 * 256) + 1;
-        }
-
-        self.regs[x] = val as u8;
-        self.pc += 2
+        self.regs[x] = ((self.regs[x] as u16 + pl) & 0xFFFF) as u8;
+        self.pc += 2;
     }
     fn set_vx_to_vy(&mut self) {
         let x = self.opcode >> 8 & 0xF;
