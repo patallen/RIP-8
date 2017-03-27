@@ -29,6 +29,7 @@ pub struct CPU<'cpu> {
     pub device: Device<'cpu>,
     delay_timer: Timer,
     program_timer: Timer,
+    sound_timer: Timer,
     debug_mode: DebugMode,
     debug_chunk: u16,
 }
@@ -64,6 +65,7 @@ impl<'cpu> CPU <'cpu>{
             pc:     0x200,
             delay_timer: Timer::new(16_666_667),
             program_timer: Timer::new(2_000_000),
+            sound_timer: Timer::new(2_000_000),
             device: Device::new(),
             debug_mode: DebugMode::Stream,
             debug_chunk: DEBUG_CHUNK,
@@ -77,6 +79,8 @@ impl<'cpu> CPU <'cpu>{
         loop {
             self.delay_timer.touch();
             self.program_timer.touch();
+            self.sound_timer.touch();
+
             self.device.pump();
             if self.device.quit {
                 break;
@@ -339,12 +343,13 @@ impl<'cpu> CPU <'cpu>{
     }
     fn jump_to_v0_plus_pl(&mut self) {
         println!("Not Implemented.");
+        self.debug_mode = DebugMode::Chunk;
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
+        let pl: u8 = (self.opcode & 0x00FF) as u8;
         let random: u8 = rand::random();
-        let pl = self.opcode & 0x00FF;
-        self.regs[(self.opcode >> 8 & 0x0F) as usize] = random & pl as u8;
+        self.regs[(self.opcode >> 8 & 0x0F) as usize] = (pl as u8) & random;
         self.pc += 2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
@@ -395,6 +400,7 @@ impl<'cpu> CPU <'cpu>{
             Some(value) => {
                 let x = (self.opcode >> 8 & 0xF) as usize;
                 self.regs[x] = value;
+                self.device.keyboard.reset();
                 self.pc += 2;
             }
             None => {}
@@ -409,7 +415,8 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
-        println!("Not Implemented.");
+        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        self.sound_timer.set_delay(vx);
         self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
