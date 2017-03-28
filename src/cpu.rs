@@ -4,7 +4,7 @@ extern crate sdl2;
 use std::fs::File;
 use std::io::{self, Read};
 use std::collections::HashMap;
-use opcodes::{parse_opcode, OpCode};
+use opcodes::{parse_opcode, Instruction, Opcode};
 use device::Device;
 use utils::Timer;
 
@@ -24,7 +24,7 @@ pub struct CPU<'cpu> {
     pub index: u16,
     pub stack: [u16; 16],
     pub sp: u8,
-    pub opcode: u16,
+    pub opcode: Opcode,
     pub pc: u16,
     pub device: Device<'cpu>,
     delay_timer: Timer,
@@ -60,7 +60,7 @@ impl<'cpu> CPU <'cpu>{
             regs:   [0; 16],
             stack:  [0; 16],
             index:  0x200,
-            opcode: 0,
+            opcode: Opcode::from_code(0),
             sp:     0, // Pointer to the topmost of the stack
             pc:     0x200,
             delay_timer: Timer::new(16_666_667),
@@ -71,7 +71,7 @@ impl<'cpu> CPU <'cpu>{
             debug_chunk: DEBUG_CHUNK,
         };
         cpu.set_fonts();
-        cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
+        cpu.opcode = cpu.opcode_at_address(0x200);
         cpu
     }
     pub fn reset(&mut self) {
@@ -87,7 +87,8 @@ impl<'cpu> CPU <'cpu>{
         self.sound_timer = Timer::new(2_000_000);
     }
     pub fn initialize(&mut self) {
-        self.opcode = self.opcode_at_address(self.pc as usize);
+        let pc = self.pc as usize;
+        self.opcode = self.opcode_at_address(pc);
     }
     pub fn run(&mut self) {
         loop {
@@ -104,12 +105,9 @@ impl<'cpu> CPU <'cpu>{
         self.delay_timer.touch();
         self.program_timer.touch();
         self.sound_timer.touch();
-        let inst = parse_opcode(self.opcode);
-        match inst {
-            Ok(code) => self.run_opcode_instruction(code),
-            Err(e) => panic!("{}", e),
-        };
-        self.opcode = self.opcode_at_address(self.pc as usize);
+        self.run_opcode_instruction();
+        let pc = self.pc as usize;
+        self.opcode = self.opcode_at_address(pc);
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();
@@ -125,48 +123,46 @@ impl<'cpu> CPU <'cpu>{
             self.mem[i] = *byte;
         }
     }
-    pub fn opcode_at_address(&self, address: usize) -> u16 {
-        let mut ret = self.mem[address] as u16;
-        let ret2 = self.mem[address + 1] as u16;
-        (ret << 8 | ret2)
+    pub fn opcode_at_address(&self, address: usize) -> Opcode {
+        Opcode::from_bytes(self.mem[address], self.mem[address + 1])
     }
-    pub fn run_opcode_instruction<'a>(&mut self, instrcode: OpCode) {
-        match instrcode {
-            OpCode::SysAddressJump_0x0NNN           =>  self.system_address_jump(),
-            OpCode::ClearDisplay_0x00E0             =>  self.clear_display(),
-            OpCode::RetFromSubroutine_0x00EE        =>  self.return_from_sub(),
-            OpCode::JumpLocation_0x1NNN             =>  self.jump_to_location(),
-            OpCode::CallSubroutine_0x2NNN           =>  self.call_subroutine(),
-            OpCode::SkipInstrIfVxEqPL_0x3XNN        =>  self.skip_instr_if_vx_eq_pl(),
-            OpCode::SkipInstrIfVxNotEqPL_0x4XNN     =>  self.skip_instr_if_vx_neq_pl(),
-            OpCode::SkipInstrIfVxVy_0x5XY0          =>  self.skip_instr_if_vx_eq_vy(),
-            OpCode::SetVxToPL_0x6XNN                =>  self.set_vx_to_pl(),
-            OpCode::IncrementVxByPL_0x7XNN          =>  self.increment_vx_by_pl(),
-            OpCode::SetVxToVy_0x8XY0                =>  self.set_vx_to_vy(),
-            OpCode::SetVxToVxORVy_0x8XY1            =>  self.set_vx_to_vx_or_vy(),
-            OpCode::SetVxToVxANDVy_0x8XY2           =>  self.set_vx_to_vx_and_vy(),
-            OpCode::SetVxToVxXORVy_0x8XY3           =>  self.set_vx_to_vx_xor_vy(),
-            OpCode::IncrementVxByVyAndCarry_0x8XY4  =>  self.increment_vx_by_vy_carry(),
-            OpCode::DecrementVxByVyNoBorrow_0x8XY5  =>  self.decrenent_vx_by_vy_no_borrow(),
-            OpCode::ShiftAndRotateVxRight_0x8XY6    =>  self.shift_and_rotate_vx_right(),
-            OpCode::DecrementVyByVxNoBorrow_0x8XY7  =>  self.decrement_vy_by_vx_no_borrow(),
-            OpCode::ShiftAndRotateVxLeft_0x8XYE     =>  self.shift_and_rotate_vx_left(),
-            OpCode::SkipInstrIfVxNotVy_0x9XY0       =>  self.skip_instr_if_vx_not_vy(),
-            OpCode::SetIndexRegToPL_0xANNN          =>  self.set_index_register_to_pl(),
-            OpCode::JumpToV0PlusPL_0xBNNN           =>  self.jump_to_v0_plus_pl(),
-            OpCode::SetVxRandByteANDPL_0xCXNN       =>  self.set_vx_rand_byte_and_pl(),
-            OpCode::DisplaySpriteSetVfColl_0xDXYN   =>  self.display_sprite_set_vf_collision(),
-            OpCode::SkipInstrIfVxPressed_0xEX9E     =>  self.skip_instr_if_vx_pressed(),
-            OpCode::SkipInstrIfVxNotPressed_0xEXA1  =>  self.skip_instr_if_vx_not_pressed(),
-            OpCode::SetVxToDelayTimerVal_0xFX07     =>  self.set_vx_to_delay_timer_val(),
-            OpCode::WaitForKeyStoreInVx_0xFX0A      =>  self.wait_for_key_and_store_in_vx(),
-            OpCode::SetDelayTimerToVx_0xFX15        =>  self.set_delay_timer_to_vx(),
-            OpCode::SetSoundTimerToVx_0xFX18        =>  self.set_sound_timer_to_vx(),
-            OpCode::IncrementIndexRegByVx_0xFX1E    =>  self.increment_index_register_by_vx(),
-            OpCode::SetIndexRegToVxSprite_0xFX29    =>  self.set_index_register_to_vx_sprite(),
-            OpCode::StoreBCDOfVxIn3Bytes_0xFX33     =>  self.store_bcd_of_vx_3bytes(),
-            OpCode::StoreRegsUptoVx_0xFX55          =>  self.store_registers_through_vx(),
-            OpCode::ReadRegsUptoVx_0xFX65           =>  self.read_registers_through_vx(),   
+    pub fn run_opcode_instruction<'a>(&mut self) {
+        match self.opcode.instr {
+            Instruction::SysAddressJump_0x0NNN           =>  self.system_address_jump(),
+            Instruction::ClearDisplay_0x00E0             =>  self.clear_display(),
+            Instruction::RetFromSubroutine_0x00EE        =>  self.return_from_sub(),
+            Instruction::JumpLocation_0x1NNN             =>  self.jump_to_location(),
+            Instruction::CallSubroutine_0x2NNN           =>  self.call_subroutine(),
+            Instruction::SkipInstrIfVxEqPL_0x3XNN        =>  self.skip_instr_if_vx_eq_pl(),
+            Instruction::SkipInstrIfVxNotEqPL_0x4XNN     =>  self.skip_instr_if_vx_neq_pl(),
+            Instruction::SkipInstrIfVxVy_0x5XY0          =>  self.skip_instr_if_vx_eq_vy(),
+            Instruction::SetVxToPL_0x6XNN                =>  self.set_vx_to_pl(),
+            Instruction::IncrementVxByPL_0x7XNN          =>  self.increment_vx_by_pl(),
+            Instruction::SetVxToVy_0x8XY0                =>  self.set_vx_to_vy(),
+            Instruction::SetVxToVxORVy_0x8XY1            =>  self.set_vx_to_vx_or_vy(),
+            Instruction::SetVxToVxANDVy_0x8XY2           =>  self.set_vx_to_vx_and_vy(),
+            Instruction::SetVxToVxXORVy_0x8XY3           =>  self.set_vx_to_vx_xor_vy(),
+            Instruction::IncrementVxByVyAndCarry_0x8XY4  =>  self.increment_vx_by_vy_carry(),
+            Instruction::DecrementVxByVyNoBorrow_0x8XY5  =>  self.decrenent_vx_by_vy_no_borrow(),
+            Instruction::ShiftAndRotateVxRight_0x8XY6    =>  self.shift_and_rotate_vx_right(),
+            Instruction::DecrementVyByVxNoBorrow_0x8XY7  =>  self.decrement_vy_by_vx_no_borrow(),
+            Instruction::ShiftAndRotateVxLeft_0x8XYE     =>  self.shift_and_rotate_vx_left(),
+            Instruction::SkipInstrIfVxNotVy_0x9XY0       =>  self.skip_instr_if_vx_not_vy(),
+            Instruction::SetIndexRegToPL_0xANNN          =>  self.set_index_register_to_pl(),
+            Instruction::JumpToV0PlusPL_0xBNNN           =>  self.jump_to_v0_plus_pl(),
+            Instruction::SetVxRandByteANDPL_0xCXNN       =>  self.set_vx_rand_byte_and_pl(),
+            Instruction::DisplaySpriteSetVfColl_0xDXYN   =>  self.display_sprite_set_vf_collision(),
+            Instruction::SkipInstrIfVxPressed_0xEX9E     =>  self.skip_instr_if_vx_pressed(),
+            Instruction::SkipInstrIfVxNotPressed_0xEXA1  =>  self.skip_instr_if_vx_not_pressed(),
+            Instruction::SetVxToDelayTimerVal_0xFX07     =>  self.set_vx_to_delay_timer_val(),
+            Instruction::WaitForKeyStoreInVx_0xFX0A      =>  self.wait_for_key_and_store_in_vx(),
+            Instruction::SetDelayTimerToVx_0xFX15        =>  self.set_delay_timer_to_vx(),
+            Instruction::SetSoundTimerToVx_0xFX18        =>  self.set_sound_timer_to_vx(),
+            Instruction::IncrementIndexRegByVx_0xFX1E    =>  self.increment_index_register_by_vx(),
+            Instruction::SetIndexRegToVxSprite_0xFX29    =>  self.set_index_register_to_vx_sprite(),
+            Instruction::StoreBCDOfVxIn3Bytes_0xFX33     =>  self.store_bcd_of_vx_3bytes(),
+            Instruction::StoreRegsUptoVx_0xFX55          =>  self.store_registers_through_vx(),
+            Instruction::ReadRegsUptoVx_0xFX65           =>  self.read_registers_through_vx(),   
         }
     }
     fn system_address_jump(&mut self) {
@@ -184,87 +180,70 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn jump_to_location(&mut self) {
-        // GOTO -> Set the PC to the specified address.
-        // Doing so will make the interpreter pick up at this address
-        // on the next cycle.
-        self.pc = self.opcode & 0x0FFF;
+        self.pc = self.opcode.xyz();
     }
     fn call_subroutine(&mut self) {
         self.stack[self.sp as usize] = self.pc;
         self.sp += 1;
-        self.pc = self.opcode & 0x0FFF;
+        self.pc = self.opcode.xyz();
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        let nn = self.opcode & 0x00FF;
-
-        if vx == nn as u8 {
+        let vx = self.regs[self.opcode.x()];
+        if vx == self.opcode.yz() as u8 {
             self.pc += 2;
         }
-
         self.pc += 2;
     }
     fn skip_instr_if_vx_neq_pl(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        let nn = self.opcode & 0x00FF;
+        let vx = self.regs[self.opcode.x()];
 
-        if vx != nn as u8 {
+        if vx != self.opcode.yz() as u8 {
             self.pc += 2;
         }
-
         self.pc += 2;
     }
     fn skip_instr_if_vx_eq_vy(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
-
-        if vx == vy {
+        if self.regs[self.opcode.x()] == self.regs[self.opcode.y()] {
             self.pc += 2;
         }
         self.pc += 2;
     }
     fn set_vx_to_pl(&mut self) {
-        let kk = self.opcode & 0x00FF;
-        let x = self.opcode >> 8 & 0x0F;
-
-        self.regs[x as usize] = kk as u8;
+        self.regs[self.opcode.x()] = self.opcode.yz() as u8;
         self.pc += 2;
     }
     fn increment_vx_by_pl(&mut self) {
-        let x = (self.opcode >> 8 & 0xF) as usize;
-        let pl = (self.opcode & 0x00FF) as u16;
+        let x = self.opcode.x();
+        let pl = self.opcode.yz();
 
         self.regs[x] = ((self.regs[x] as u16 + pl) & 0xFFFF) as u8;
         self.pc += 2;
     }
     fn set_vx_to_vy(&mut self) {
-        let x = self.opcode >> 8 & 0xF;
-        let y = self.opcode >> 4 & 0xF;
-        self.regs[x as usize] = self.regs[y as usize] as u8;
+        self.regs[self.opcode.x()] = self.regs[self.opcode.y()] as u8;
         self.pc += 2;
     }
     fn set_vx_to_vx_or_vy(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let y = (self.opcode >> 4 & 0xF) as usize;
+        let x = self.opcode.x();
+        let y = self.opcode.y();
         self.regs[x] = self.regs[x] | self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_and_vy(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let y = (self.opcode >> 4 & 0xF) as usize;
+        let x = self.opcode.x();
+        let y = self.opcode.y();
         self.regs[x] = self.regs[x] & self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_xor_vy(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let y = (self.opcode >> 4 & 0xF) as usize;
+        let x = self.opcode.x();
+        let y = self.opcode.y();
         self.regs[x] = self.regs[x] ^ self.regs[y];
         self.pc += 2;
     }
     fn increment_vx_by_vy_carry(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let vx = self.regs[x] as u16;
-        let vy = self.regs[(self.opcode >> 8 & 0x0F) as usize] as u16;
+        let vx = self.regs[self.opcode.x()] as u16;
+        let vy = self.regs[self.opcode.y()] as u16;
 
         let mut val: u16 = vx + vy;
         let mut carry = 0;
@@ -272,35 +251,33 @@ impl<'cpu> CPU <'cpu>{
             val = val - (val / 256 * 256) + 1;
             carry = 1;
         }
-        self.regs[x] = val as u8;
+        self.regs[self.opcode.x()] = val as u8;
         self.regs[0xF] = carry as u8;
 
         self.pc += 2;
     }
     fn decrenent_vx_by_vy_no_borrow(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let vx = self.regs[x as usize];
-        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+        let vx = self.regs[self.opcode.x()];
+        let vy = self.regs[self.opcode.y()];
 
         self.regs[0xF] = 0;
         if vx > vy {
             self.regs[0xF] = 1;
         }
-        self.regs[x] = vx.wrapping_sub(vy);
+        self.regs[self.opcode.x()] = vx.wrapping_sub(vy);
 
         self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
-        let x = (self.opcode >> 8 &0x0F) as usize;
+        let x = self.opcode.x();
         self.regs[0xF] = self.regs[x] & 1;
         self.regs[x] = self.regs[x] >> 1;
-        // self.debug_mode = DebugMode::Step;
         self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
-        let vx = self.regs[x as usize];
-        let vy = self.regs[(self.opcode >> 4 & 0x0F) as usize];
+        let x = self.opcode.x();
+        let vx = self.regs[x];
+        let vy = self.regs[self.opcode.y()];
 
         self.regs[0xF] = 0;
         if vy > vx {
@@ -311,7 +288,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
-        let x = (self.opcode >> 8 & 0x0F) as usize;
+        let x = self.opcode.x();
         self.regs[0xF] = self.regs[x] >> 7;
         self.regs[x] = self.regs[x].wrapping_add(self.regs[x]);
         self.pc += 2;
@@ -321,8 +298,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 4; // TODO: Change this
     }
     fn set_index_register_to_pl(&mut self) {
-        let opcode = self.opcode;
-        self.index = opcode & 0x0FFF;
+        self.index = self.opcode.xyz();
         self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
@@ -330,26 +306,16 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
-        let pl: u8 = (self.opcode & 0x00FF) as u8;
         let random: u8 = rand::random();
-        self.regs[(self.opcode >> 8 & 0x0F) as usize] = (pl as u8) & random;
+        self.regs[self.opcode.x()] = (self.opcode.yz() as u8) & random;
         self.pc += 2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
-        // Dxyn - DRW Vx, Vy, nibble
-        // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+        let x = self.regs[self.opcode.x()];
+        let y = self.regs[self.opcode.y()];
 
-        // The interpreter reads n bytes from memory, starting at the address stored in I. These
-        // bytes are then displayed as sprites on screen at coordinates (Vx, Vy). Sprites are XORed
-        // onto the existing screen. If this causes any pixels to be erased, VF is set to 1, otherwise
-        // it is set to 0. If the sprite is positioned so part of it is outside the coordinates of the display,
-        // it wraps around to the opposite side of the screen. 
-        let x = self.regs[(self.opcode >> 8 & 0x0F) as usize];
-        let y = self.regs[(self.opcode >> 4 & 0x0F) as usize];
-        let n = self.opcode & 0x0F;
         let mut flag = false;
-
-        for i in 0..n {
+        for i in 0..self.opcode.z() {
             let byte = self.mem[self.index as usize + i as usize];
             let res = self.device.write_byte(byte, x as usize, y as usize + i as usize);
             flag = flag || res;
@@ -368,21 +334,20 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vx = self.regs[self.opcode.x()];
         if !self.device.keyboard.check_value_pressed(vx) {
             self.pc += 2;
         }
         self.pc += 2;
     }
     fn set_vx_to_delay_timer_val(&mut self) {
-        self.regs[(self.opcode >> 8 & 0x0F) as usize] = self.delay_timer.get_delay();
+        self.regs[self.opcode.x()] = self.delay_timer.get_delay();
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
         match self.device.keyboard.get_pressed_key() {
             Some(value) => {
-                let x = (self.opcode >> 8 & 0xF) as usize;
-                self.regs[x] = value;
+                self.regs[self.opcode.x()] = value;
                 self.device.keyboard.reset();
                 self.pc += 2;
             }
@@ -391,32 +356,29 @@ impl<'cpu> CPU <'cpu>{
 
     }
     fn set_delay_timer_to_vx(&mut self) {
-        // 0xFx15
-        let x = self.opcode >> 8 & 0x0F;
-        let vx = self.regs[x as usize];
+        let vx = self.regs[self.opcode.x()];
         self.delay_timer.set_delay(vx);
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vx = self.regs[self.opcode.x()];
         self.sound_timer.set_delay(vx);
         self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
-        let idx = self.opcode >> 8 & 0x0F;
-        self.index += self.regs[idx as usize] as u16;
+        self.index += self.regs[self.opcode.x()] as u16;
         self.pc += 2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vx = self.regs[self.opcode.x()];
         self.index = (vx * 5) as u16;
         self.pc += 2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
-        let vx = self.regs[(self.opcode >> 8 & 0x0F) as usize];
+        let vx = self.regs[self.opcode.x()];
         let hunds = vx / 100 * 100;
         let tens = (vx - hunds) / 10 * 10;
-        let ones = (vx - hunds - tens);
+        let ones = vx - hunds - tens;
         self.mem[self.index as usize] = hunds / 100;
         self.mem[self.index as usize + 1] = tens / 10;
         self.mem[self.index as usize + 2] = ones;
@@ -424,23 +386,20 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn store_registers_through_vx(&mut self) {
-        let x = self.opcode >> 8 & 0x0F;;
+        let x = self.opcode.x();
 
         for i in 0..x + 1 {
             let ii = i as usize;
             self.mem[self.index as usize + ii as usize] = self.regs[ii];
         }
-        self.index = self.index + x - 1;
+        self.index = self.index + (x - 1) as u16;
         self.pc += 2;
     }
     fn read_registers_through_vx(&mut self) {
-        // read memory self.mem[self.index : PLx] into registers starting at 0
-        let opcode = self.opcode;
-        let shifted = opcode >> 8 & 0x0F;
-        let value = shifted as usize;
+        let x = self.opcode.x();
         let index = self.index as usize;
 
-        for i in 0..value + 1 {
+        for i in 0..x + 1 {
             self.regs[i] = self.mem[index + i];
         }
         self.pc += 2;
@@ -464,9 +423,6 @@ pub fn print_sprite(arr: &[u8; 4096], start: usize, no_bytes: usize) {
 
 #[test]
 pub fn test_run_operation_for_goto() {
-    // opcode = 0x10 << 8 | 0xF0 = 0x10F0
-    // this means that our GOTO should take the last 3 hex
-    // digits and put them into our program counter
     let mut cpu = CPU::new();
     cpu.mem[0x200] = 0x10;
     cpu.mem[0x201] = 0xF0;

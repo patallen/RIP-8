@@ -51,8 +51,8 @@ impl<'a> Debugger<'a> {
 	fn dump_instr(&self) -> String {
 		let pc = self.cpu.pc;
 		let i = self.cpu.index;
-		let instr = parse_opcode(self.cpu.opcode);
-		format!("(PC:{:X}::I:{:X}) -> {:?} for 0x{:X}", pc, i, instr, self.cpu.opcode)
+		let instr = &self.cpu.opcode.instr;
+		format!("(PC:{:X}::I:{:X}) -> {:?} for 0x{:X}", pc, i, instr, self.cpu.opcode.value)
 	}
 	fn reset(&mut self) {
 		self.cpu.reset();
@@ -71,7 +71,8 @@ impl<'a> Debugger<'a> {
 		}
 	}
 	fn cycle(&mut self) {
-		let message = format!("{:?}", self.cpu.opcode);
+		warn!("28E: {:X}", self.cpu.mem[0x28E]);
+		let message = format!("{:?}", self.cpu.opcode.value);
 		let line = self.dump_instr();
 		self.cpu.cycle();
 		self.lines.push(line);
