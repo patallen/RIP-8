@@ -74,46 +74,25 @@ impl<'cpu> CPU <'cpu>{
         cpu.opcode = cpu.opcode_at_address(cpu.pc as usize);
         cpu
     }
+    pub fn reset(&mut self) {
+        self.initialize();
+        self.mem = [0; 4096];
+        self.regs = [0; 16];
+        self.stack = [0; 16];
+        self.index = 0x200;
+        self.sp = 0;
+        self.pc = 0x200;
+        self.delay_timer = Timer::new(16_666_667);
+        self.program_timer = Timer::new(2_000_000);
+        self.sound_timer = Timer::new(2_000_000);
+    }
+    pub fn initialize(&mut self) {
+        self.opcode = self.opcode_at_address(self.pc as usize);
+    }
     pub fn run(&mut self) {
-        let mut count: u16 = 0;
         loop {
-            self.delay_timer.touch();
-            self.program_timer.touch();
-            self.sound_timer.touch();
-
-            self.device.pump();
             if self.device.quit {
                 break;
-            }
-            // self.device.debug_break = true;
-            if self.device.debug_break {
-              self.debug_mode = DebugMode::Step;
-            } else if self.device.debug_chunk {
-                self.debug_mode = DebugMode::Chunk;
-            };  
-
-            self.opcode = self.opcode_at_address(self.pc as usize);
-            if DEBUG && (self.debug_mode != DebugMode::Off) {
-                let inst = parse_opcode(self.opcode).unwrap();
-                if inst != OpCode::WaitForKeyStoreInVx_0xFX0A{
-                    println!("Instr: {:?}. Code: 0x{:X}. PC: 0x{:X}. SP: 0x{:X}. *SP: 0x{:X}. I: 0x{:X}\r", inst, self.opcode, self.pc, self.sp, self.stack[self.sp as usize], self.index);
-                    println!("REGS: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7], self.regs[8], self.regs[9], self.regs[10], self.regs[11], self.regs[12], self.regs[13] , self.regs[14], self.regs[15]);
-                    println!("STCK: 0:{:x}|1:{:x}|2:{:x}|3:{:x}|4:{:x}|5:{:x}|6:{:x}|7:{:x}|8:{:x}|9:{:x}|A:{:x}|B:{:x}|C:{:x}|D:{:x}|E:{:x}|F:{:x}|", self.stack[0], self.stack[1], self.stack[2], self.stack[3], self.stack[4], self.stack[5], self.stack[6], self.stack[7], self.stack[8], self.stack[9], self.stack[10], self.stack[11], self.stack[12], self.stack[13] , self.stack[14], self.stack[15]);
-
-                }
-
-                match self.debug_mode {
-                    DebugMode::Step | DebugMode::Chunk => {
-                        if self.debug_mode == DebugMode::Step || (count >= self.debug_chunk) {
-                            let mut s = String::new();
-                            io::stdin().read_line(&mut s).unwrap();
-                            count = 0;
-                        }
-                        count += 1;
-
-                    },
-                    _ => {},
-                }
             }
             if self.program_timer.get_delay() == 0 {
                 self.cycle();
@@ -121,11 +100,16 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     pub fn cycle(&mut self) {
+        self.device.pump();
+        self.delay_timer.touch();
+        self.program_timer.touch();
+        self.sound_timer.touch();
         let inst = parse_opcode(self.opcode);
         match inst {
             Ok(code) => self.run_opcode_instruction(code),
             Err(e) => panic!("{}", e),
         };
+        self.opcode = self.opcode_at_address(self.pc as usize);
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();

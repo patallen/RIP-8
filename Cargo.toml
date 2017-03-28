@@ -6,3 +6,6 @@ authors = ["Patrick Allen <prallen90@gmail.com>"]
 [dependencies]
 sdl2 = "0.27"
 rand = "0.3"
+termion = "*"
+log = "*"
+log4rs = "*"
