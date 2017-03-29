@@ -1,14 +1,7 @@
-#[macro_use]
 extern crate log;
 extern crate log4rs;
 extern crate termion;
-
-use log::LogLevel;
-use log::LogLevelFilter;
-use log4rs::append::console::ConsoleAppender;
-use log4rs::append::file::FileAppender;
-use log4rs::encode::pattern::PatternEncoder;
-use log4rs::config::{Appender, Config, Logger, Root};
+extern crate sdl2;
 
 mod cpu;
 mod device;
@@ -21,7 +14,6 @@ mod debugger;
 use debugger::Debugger;
 use std::env;
 use std::path::Path;
-use cpu::CPU;
 
 pub const DEBUG: bool = true;
 pub const DEBUG_CHUNK: u16 = 8;

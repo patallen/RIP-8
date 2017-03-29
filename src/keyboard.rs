@@ -1,8 +1,5 @@
-extern crate sdl2;
-
-use self::sdl2::EventPump;
-use self::sdl2::keyboard::{self, Keycode};
-use self::sdl2::event::Event::{self, KeyUp, KeyDown, Quit};
+use sdl2::keyboard::Keycode;
+use sdl2::event::Event;
 
 #[derive(Debug)]
 struct Key {
@@ -72,7 +69,7 @@ impl Keyboard {
             key_f: Key::new(0xf),
         }
     }
-    pub fn handle_event(&mut self, event: sdl2::event::Event) {
+    pub fn handle_event(&mut self, event: Event) {
         match event {
             Event::KeyDown { keycode, .. } => match keycode {
                 Some(Keycode::Num1)   => self.key_1.press(),
@@ -115,7 +112,7 @@ impl Keyboard {
             _ => {}
         }
     }
-    pub fn keys(&mut self) -> [&Key; 16] {
+    fn keys(&mut self) -> [&Key; 16] {
         [
             &self.key_0,
             &self.key_1,
@@ -153,9 +150,7 @@ impl Keyboard {
         self.key_e.reset();
         self.key_f.reset();
     }
-    pub fn key_is_pressed(&mut self) -> bool {
-        self.keys().into_iter().fold(false, |l, n| l || n.is_pressed())
-    }
+
     pub fn get_pressed_key(&mut self) -> Option<u8> {
         for key in self.keys().into_iter() {
             if key.is_pressed() {
@@ -164,6 +159,7 @@ impl Keyboard {
         }
         return None
     }
+
     pub fn check_value_pressed(&mut self, value: u8) -> bool {
         for key in self.keys().into_iter() {
             if key.value() == value {

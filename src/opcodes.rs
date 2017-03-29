@@ -71,9 +71,6 @@ impl Opcode {
     pub fn xyz(&self) -> u16 {
         self.value & 0xFFF
     }
-    pub fn parse(&self) -> (usize, usize, usize) {
-        (self.x(), self.y(), self.z())
-    }
 }
 
 pub fn parse_opcode(code: u16) -> Result<Instruction, &'static str> {

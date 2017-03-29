@@ -3,7 +3,7 @@ extern crate sdl2;
 use self::sdl2::render::Renderer;
 use self::sdl2::pixels::Color;
 use self::sdl2::rect::Rect;
-use self::sdl2::video::Window;
+
 
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
@@ -15,8 +15,6 @@ const TITLE: &str = "RIP-8::CHIP-8";
 
 pub struct Display<'d> {
     pixels: [u8; SCREEN_PIXELS],
-    width: usize,
-    height: usize,
     renderer: Renderer<'d>,
 }
 
@@ -26,11 +24,9 @@ impl<'d> Display<'d> {
         let video = context.video().unwrap();
         let window = video.window(TITLE, DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
                           .position_centered().opengl().build().unwrap();
-        let mut renderer = window.renderer().accelerated()
-                             .build().unwrap();
+        let renderer = window.renderer().accelerated()
+                              .build().unwrap();
         Display {
-            width: SCREEN_WIDTH,
-            height: SCREEN_HEIGHT,
             pixels: [0; SCREEN_PIXELS],
             renderer: renderer,
         }
@@ -79,7 +75,7 @@ impl<'d> Display<'d> {
         self.renderer.present();
     }
     pub fn clear(&mut self) {
-        self.pixels = [0; SCREEN_WIDTH * SCREEN_HEIGHT];
+        self.pixels = [0; SCREEN_PIXELS];
     }
 }
 
@@ -107,6 +103,7 @@ impl Pixel {
         Rect::new(x, y, h, w)
     }
 }
+
 pub fn get_sub_arr(arr: &[u8; 2048], x: usize, y: usize) -> [u8; 8] {
     let start = x + (y * 64);
     let mut list: [u8; 8] = [0; 8];

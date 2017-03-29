@@ -1,9 +1,6 @@
-extern crate sdl2;
-
-use self::sdl2::EventPump;
-use self::sdl2::event::Event;
-use self::sdl2::render::Renderer;
-use self::sdl2::keyboard::Keycode;
+use sdl2::EventPump;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use keyboard::Keyboard;
 use display::Display;
 
@@ -20,7 +17,7 @@ pub struct Device<'d> {
 
 impl<'d> Device<'d> {
     pub fn new() -> Device<'d> {
-        let context = sdl2::init().unwrap();
+        let context = ::sdl2::init().unwrap();
         let pump = context.event_pump().unwrap();
 
         Device {

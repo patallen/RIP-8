@@ -2,23 +2,14 @@ extern crate rand;
 extern crate sdl2;
 
 use std::fs::File;
-use std::io::{self, Read};
-use std::collections::HashMap;
-use opcodes::{parse_opcode, Instruction, Opcode};
+use std::io::Read;
+use opcodes::{Instruction, Opcode};
 use device::Device;
 use utils::Timer;
 use std::thread::sleep;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use ::{DEBUG, DEBUG_CHUNK, DO_CHUNK_DEBUG};
 
-#[derive(PartialEq)]
-enum DebugMode {
-    Off,
-    Chunk,
-    Step,
-    Stream,
-}
 pub struct CPU<'cpu> {
     pub hz: u32,
     pub program_delay: Duration,
@@ -118,7 +109,7 @@ impl<'cpu> CPU <'cpu>{
         let mut file = File::open(filepath).unwrap();
         file.read_to_end(&mut rom);
 
-        for (i, mut byte) in rom.iter().enumerate() {
+        for (i, byte) in rom.iter().enumerate() {
             self.mem[i + 512] = *byte;
         }
     }
@@ -416,13 +407,6 @@ pub fn get_sub_arr(arr: &[u8; 4096], start: usize) -> [u8; 8] {
         list[i] = arr[i + start];
     }
     list
-}
-
-pub fn print_sprite(arr: &[u8; 4096], start: usize, no_bytes: usize) {
-    let mut list: [u8; 8] = [0; 8];
-    for i in 0..no_bytes {
-        println!("{:b}", arr[i + start]);
-    }
 }
 
 #[test]
