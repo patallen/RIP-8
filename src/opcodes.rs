@@ -1,40 +1,40 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
-    SysAddressJump_0x0NNN,
-    ClearDisplay_0x00E0,
-    RetFromSubroutine_0x00EE,
-    JumpLocation_0x1NNN,
-    CallSubroutine_0x2NNN,
-    SkipInstrIfVxEqPL_0x3XNN,
-    SkipInstrIfVxNotEqPL_0x4XNN,
-    SkipInstrIfVxVy_0x5XY0,
-    SetVxToPL_0x6XNN,
-    IncrementVxByPL_0x7XNN,
-    SetVxToVy_0x8XY0,
-    SetVxToVxORVy_0x8XY1,
-    SetVxToVxANDVy_0x8XY2,
-    SetVxToVxXORVy_0x8XY3,
-    IncrementVxByVyAndCarry_0x8XY4,
-    DecrementVxByVyNoBorrow_0x8XY5,
-    ShiftAndRotateVxRight_0x8XY6,
-    DecrementVyByVxNoBorrow_0x8XY7,
-    ShiftAndRotateVxLeft_0x8XYE,
-    SkipInstrIfVxNotVy_0x9XY0,
-    SetIndexRegToPL_0xANNN,
-    JumpToV0PlusPL_0xBNNN,
-    SetVxRandByteANDPL_0xCXNN,
-    DisplaySpriteSetVfColl_0xDXYN,
-    SkipInstrIfVxPressed_0xEX9E,
-    SkipInstrIfVxNotPressed_0xEXA1,
-    SetVxToDelayTimerVal_0xFX07,
-    WaitForKeyStoreInVx_0xFX0A,
-    SetDelayTimerToVx_0xFX15,
-    SetSoundTimerToVx_0xFX18,
-    IncrementIndexRegByVx_0xFX1E,
-    SetIndexRegToVxSprite_0xFX29,
-    StoreBCDOfVxIn3Bytes_0xFX33,
-    StoreRegsUptoVx_0xFX55,
-    ReadRegsUptoVx_0xFX65,
+    SysAddressJump_0x0NNN,          // Jump to address NNN
+    ClearDisplay_0x00E0,            // Clear the display
+    RetFromSubroutine_0x00EE,       // Return from Subroutine
+    JumpLocation_0x1NNN,            // Jump to address: Set PC to 0xNNN
+    CallSubroutine_0x2NNN,          // Call Subroutine: Set PC to 0xNNN
+    SkipInstrIfVxEqPL_0x3XNN,       // Skip Instruction if v[x] == 0xNN
+    SkipInstrIfVxNotEqPL_0x4XNN,    // Skip Instruction if v[x] != 0xNN
+    SkipInstrIfVxVy_0x5XY0,         // Skip Instruction if v[x] == v[y]
+    SetVxToPL_0x6XNN,               // Set v[x] to 0xNN
+    IncrementVxByPL_0x7XNN,         // Increment v[x] by 0xNN
+    SetVxToVy_0x8XY0,               // Set v[x] to v[y](xx)
+    SetVxToVxORVy_0x8XY1,           // Set v[x] to v[x] | v[y]
+    SetVxToVxANDVy_0x8XY2,          // Set v[x] to v[x] & v[y]
+    SetVxToVxXORVy_0x8XY3,          // Set v[x] to v[x] ^ v[y]
+    IncrementVxByVyAndCarry_0x8XY4, // Increment v[x](xx) by v[y](yy) and set v[F] = 1 if overflow
+    DecrementVxByVyNoBorrow_0x8XY5, // Decrement v[x](xx) by v[y](yy) and set v[F] = 1 if v[x] > v[y]
+    ShiftAndRotateVxRight_0x8XY6,   // Shift and rotate v[x] right
+    DecrementVyByVxNoBorrow_0x8XY7, // Decrement v[y](yy) by v[x](xx) and set v[F] = 1 if v[y] > v[x]
+    ShiftAndRotateVxLeft_0x8XYE,    // Shift and rotate v[x] left
+    SkipInstrIfVxNotVy_0x9XY0,      // Skip instruction if v[x](xx) != v[y](yy)
+    SetIndexRegToPL_0xANNN,         // Set index to 0xNNN
+    JumpToV0PlusPL_0xBNNN,          // Jump to v[0] + 0xNNN: Set PC to 0xXXX
+    SetVxRandByteANDPL_0xCXNN,      // Set v[x] to randbyte(0xNNN) & 0xNN
+    DisplaySpriteSetVfColl_0xDXYN,  // Display N-byte sprite and set v[F] = 1 if collision
+    SkipInstrIfVxPressed_0xEX9E,    // Skip instruction if v[x](keycode) pressed
+    SkipInstrIfVxNotPressed_0xEXA1, // Skip instruction if v[x](keycode) not pressed
+    SetVxToDelayTimerVal_0xFX07,    // Set v[x] to value of delay timer (xxx)
+    WaitForKeyStoreInVx_0xFX0A,     // Wait for key and store it's value in v[x]
+    SetDelayTimerToVx_0xFX15,       // Set delay timer to v[x](xx)
+    SetSoundTimerToVx_0xFX18,       // Set sound timer to v[x](xx)
+    IncrementIndexRegByVx_0xFX1E,   // Set index = index(xx) + v[x](xx)
+    SetIndexRegToVxSprite_0xFX29,   // Set index equal to the v[x]th sprite (v[x] * 5)
+    StoreBCDOfVxIn3Bytes_0xFX33,    // Store BCD of v[x](xxx) in mem[i], mem[i+1], mem[i+2]
+    StoreRegsUptoVx_0xFX55,         // Store v[0] through v[x] in mem[i] through mem[i + x]
+    ReadRegsUptoVx_0xFX65,          // Store mem[i] through mem[i+x] in v[0] through v[x]
 }
 
 pub struct Opcode {
