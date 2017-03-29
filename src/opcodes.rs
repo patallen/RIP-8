@@ -4,7 +4,7 @@ pub enum Instruction {
     ClearDisplay_0x00E0,            // Clear the display
     RetFromSubroutine_0x00EE,       // Return from Subroutine
     JumpLocation_0x1NNN,            // Jump to address: Set PC to 0xNNN
-    CallSubroutine_0x2NNN,          // Call Subroutine: Set PC to 0xNNN
+    CallSubroutine_0x2NNN,          // Call Subroutine: Set PC to 0xNNN, set sp += 1, set pc = NNN
     SkipInstrIfVxEqPL_0x3XNN,       // Skip Instruction if v[x] == 0xNN
     SkipInstrIfVxNotEqPL_0x4XNN,    // Skip Instruction if v[x] != 0xNN
     SkipInstrIfVxVy_0x5XY0,         // Skip Instruction if v[x] == v[y]
@@ -56,22 +56,22 @@ impl Opcode {
             instr: parse_opcode(code).unwrap(),
         }
     }
-    pub fn x(&mut self) -> usize {
+    pub fn x(&self) -> usize {
         (self.value >> 8 & 0xF) as usize
     }
-    pub fn y(&mut self) -> usize {
+    pub fn y(&self) -> usize {
         (self.value >> 4 & 0xF) as usize
     }
-    pub fn z(&mut self) -> usize {
+    pub fn z(&self) -> usize {
         (self.value & 0xF) as usize
     }
-    pub fn yz(&mut self) -> u16 {
+    pub fn yz(&self) -> u16 {
         self.value & 0xFF
     }
-    pub fn xyz(&mut self) -> u16 {
+    pub fn xyz(&self) -> u16 {
         self.value & 0xFFF
     }
-    pub fn parse(&mut self) -> (usize, usize, usize) {
+    pub fn parse(&self) -> (usize, usize, usize) {
         (self.x(), self.y(), self.z())
     }
 }
