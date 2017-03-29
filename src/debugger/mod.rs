@@ -1,4 +1,6 @@
 mod view;
+mod history;
+
 
 use std::io::prelude::*;
 use cpu::CPU;
@@ -8,6 +10,8 @@ use ::termion::input::TermRead;
 use ::termion::event::{Key, Event};
 use ::termion::async_stdin;
 use opcodes::parse_opcode;
+use self::history::LimitedFifoQueue;
+
 
 #[derive(PartialEq)]
 pub enum Command {
@@ -27,7 +31,7 @@ pub enum State {
 }
 
 pub struct Debugger<'a> {
-	lines: Vec<String>,
+	lines: LimitedFifoQueue<String>,
 	pub cpu: CPU<'a>,
 	view: View<'a>,
 	record: usize,
@@ -39,7 +43,7 @@ pub struct Debugger<'a> {
 impl<'a> Debugger<'a> {
 	pub fn new() -> Debugger<'a> {
 		Debugger {
-			lines: Vec::new(),
+			lines: LimitedFifoQueue::new(200),
 			cpu: CPU::new(),
 			view: View::new(),
 			record: 0,
@@ -56,7 +60,7 @@ impl<'a> Debugger<'a> {
 	}
 	fn reset(&mut self) {
 		self.cpu.reset();
-		self.lines = Vec::new();
+		self.lines.clear();
 		self.record = 0;
 		self.last_command = None;
 		self.state = State::Paused;
@@ -71,9 +75,8 @@ impl<'a> Debugger<'a> {
 		}
 	}
 	fn cycle(&mut self) {
-		let message = format!("{:?}", self.cpu.opcode.value);
-		let line = self.dump_instr();
 		self.cpu.cycle();
+		let line = self.dump_instr();
 		self.lines.push(line);
 		self.view.render(&self.lines);
 	}

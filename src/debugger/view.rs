@@ -4,7 +4,7 @@ use ::termion::input::TermRead;
 use ::termion::{cursor, color, style, clear, terminal_size};
 use ::termion::raw::{IntoRawMode, RawTerminal};
 use std::io::{Write, stdout, stdin, BufWriter, Result, Stdout};
-const OPTION_MENU: &'static str = "| '}':next | '{':prev | 'P':Pause | esc:quit |";
+use std::fmt;
 
 pub struct View<'view> {
 	stdout: BufWriter<RawTerminal<Stdout>>,
@@ -27,15 +27,22 @@ impl<'view> View<'view> {
 		view.update();
 		view
 	}
-	pub fn render(&mut self, lines: &Vec<String>) {
+	pub fn render<I>(&mut self, lines: I)
+		where I: IntoIterator,
+			  I::Item: fmt::Display,
+	{
 		self.update();
 		write!(self.stdout, "{}", clear::All).unwrap();
 		self.paint_lines(lines);
 		self.paint_menu();
 		self.stdout.flush();
 	}
-	fn paint_lines(&mut self, lines: &Vec<String>) {
-		for (idx, line)in lines.into_iter().rev().enumerate() {
+
+	fn paint_lines<I>(&mut self, lines: I)
+		where I: IntoIterator,
+			  I::Item: fmt::Display,
+	{
+		for (idx, line)in lines.into_iter().enumerate() {
 			if idx < self.height as usize {
 				write!(self.stdout,
 					   "{}{}",
