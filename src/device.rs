@@ -41,7 +41,7 @@ impl<'d> Device<'d> {
                     Some(Keycode::Escape) => self.quit = true,
                     _ => self.keyboard.handle_event(event)
                 },
-                Event::KeyUp { .. } => self.keyboard.handle_event(event),
+                // Event::KeyUp { .. } => self.keyboard.handle_event(event),
                 Event::Quit { .. } => self.quit = true,
                 _ => {}
             }
