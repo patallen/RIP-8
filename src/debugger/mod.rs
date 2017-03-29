@@ -22,7 +22,7 @@ pub enum Command {
 	Next,
 	Quit,
 	Reset,
-	ChangeSpeed(f32)
+	ChangeSpeed(i32)
 }
 
 #[derive(PartialEq, Debug)]
@@ -120,10 +120,9 @@ impl<'a> Debugger<'a> {
 	fn quit(&mut self) {
 		self.state = State::Quitting;
 	}
-	fn change_speed(&mut self, delta: f32) {
-		let current_hz = self.cpu.hz as f64;
-		let next = (current_hz + ((current_hz) * delta as f64)) as u32;
-		self.cpu.set_speed_hz(next);
+	fn change_speed(&mut self, hertz: i32) {
+		let current_hz = self.cpu.hz as i32;
+		self.cpu.set_speed_hz((current_hz + hertz) as u32);
 	}
 	fn handle_command(&mut self) {
 		match self.last_command {
@@ -158,8 +157,8 @@ impl<'a> Debugger<'a> {
 				Some(Ok(Key::Left))			=> Some(Command::Back),
 				Some(Ok(Key::Char('p')))	=> Some(Command::PlayToggle),
 				Some(Ok(Key::Char('n')))	=> Some(Command::Step),
-				Some(Ok(Key::Char('='))) 	=> Some(Command::ChangeSpeed(0.1)),
-				Some(Ok(Key::Char('-'))) 	=> Some(Command::ChangeSpeed(-0.1)),
+				Some(Ok(Key::Char('='))) 	=> Some(Command::ChangeSpeed(10)),
+				Some(Ok(Key::Char('-'))) 	=> Some(Command::ChangeSpeed(-10)),
 				Some(Ok(Key::Backspace)) 	=> Some(Command::Reset),
 				Some(Ok(Key::Esc))			=> Some(Command::Quit),
 				_ 							=> None

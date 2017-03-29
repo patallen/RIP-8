@@ -100,8 +100,7 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     pub fn set_speed_hz(&mut self, hertz: u32) {
-        if hertz > 0 {
-            warn!("{}, {:?}", hertz, self.program_delay);
+        if hertz > 1 {
             self.program_delay = Duration::new(0, ((1.0 / hertz as f64) * 1000000000.0) as u32);
             self.hz = hertz;
         }
