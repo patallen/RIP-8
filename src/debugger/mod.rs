@@ -71,7 +71,6 @@ impl<'a> Debugger<'a> {
 		}
 	}
 	fn cycle(&mut self) {
-		warn!("28E: {:X}", self.cpu.mem[0x28E]);
 		let message = format!("{:?}", self.cpu.opcode.value);
 		let line = self.dump_instr();
 		self.cpu.cycle();
@@ -99,6 +98,7 @@ impl<'a> Debugger<'a> {
 		};
 	}
 	pub fn run(&mut self) {
+		self.cpu.initialize();
 		let stdin = async_stdin();
 		self.view.render(&self.lines);
 		let mut events = stdin.keys();

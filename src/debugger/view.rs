@@ -30,13 +30,20 @@ impl<'view> View<'view> {
 	pub fn render(&mut self, lines: &Vec<String>) {
 		self.update();
 		write!(self.stdout, "{}", clear::All).unwrap();
-		self.paint_menu();
 		self.paint_lines(lines);
+		self.paint_menu();
 		self.stdout.flush();
 	}
 	fn paint_lines(&mut self, lines: &Vec<String>) {
-		for (idx, line)in lines.into_iter().enumerate() {
-			write!(self.stdout, "{}{}", cursor::Goto(1, (idx as u16) + 1), line);
+		for (idx, line)in lines.into_iter().rev().enumerate() {
+			if idx < self.height as usize {
+				write!(self.stdout,
+					   "{}{}",
+					   cursor::Goto(1, ((self.height as u16) - idx as u16)-1),
+					   line);
+			} else {
+				break;
+			}
 		}
 	}
 	fn paint_menu(&mut self) {

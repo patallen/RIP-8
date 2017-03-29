@@ -392,7 +392,7 @@ impl<'cpu> CPU <'cpu>{
             let ii = i as usize;
             self.mem[self.index as usize + ii as usize] = self.regs[ii];
         }
-        self.index = self.index + (x - 1) as u16;
+        self.index = self.index + x as u16 - 1 as u16;
         self.pc += 2;
     }
     fn read_registers_through_vx(&mut self) {
