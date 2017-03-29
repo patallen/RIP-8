@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use opcodes::{parse_opcode, Instruction, Opcode};
 use device::Device;
 use utils::Timer;
-
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 use ::{DEBUG, DEBUG_CHUNK, DO_CHUNK_DEBUG};
 
@@ -19,6 +20,8 @@ enum DebugMode {
     Stream,
 }
 pub struct CPU<'cpu> {
+    pub hz: u32,
+    pub program_delay: Duration,
     pub mem: [u8; 4096],
     pub regs: [u8; 16],
     pub index: u16,
@@ -27,11 +30,8 @@ pub struct CPU<'cpu> {
     pub opcode: Opcode,
     pub pc: u16,
     pub device: Device<'cpu>,
-    delay_timer: Timer,
-    program_timer: Timer,
-    sound_timer: Timer,
-    debug_mode: DebugMode,
-    debug_chunk: u16,
+    pub delay_timer: Timer,
+    pub sound_timer: Timer,
 }
 
 const FONT_SET: [u8; 80] = [
@@ -55,7 +55,11 @@ const FONT_SET: [u8; 80] = [
 
 impl<'cpu> CPU <'cpu>{
     pub fn new() -> CPU<'cpu> {
+        let hz = 500;
+        let pg = Duration::new(0, ((1.0 / hz as f64) * 1000000000.0) as u32);
         let mut cpu = CPU {
+            hz: hz,
+            program_delay: pg,
             mem:    [0; 4096],
             regs:   [0; 16],
             stack:  [0; 16],
@@ -64,11 +68,8 @@ impl<'cpu> CPU <'cpu>{
             sp:     0, // Pointer to the topmost of the stack
             pc:     0x200,
             delay_timer: Timer::new(16_666_667),
-            program_timer: Timer::new(2_000_000),
             sound_timer: Timer::new(2_000_000),
             device: Device::new(),
-            debug_mode: DebugMode::Stream,
-            debug_chunk: DEBUG_CHUNK,
         };
         cpu.set_fonts();
         cpu.opcode = cpu.opcode_at_address(0x200);
@@ -83,7 +84,6 @@ impl<'cpu> CPU <'cpu>{
         self.sp = 0;
         self.pc = 0x200;
         self.delay_timer = Timer::new(16_666_667);
-        self.program_timer = Timer::new(2_000_000);
         self.sound_timer = Timer::new(2_000_000);
     }
     pub fn initialize(&mut self) {
@@ -95,16 +95,21 @@ impl<'cpu> CPU <'cpu>{
             if self.device.quit {
                 break;
             }
-            if self.program_timer.get_delay() == 0 {
-                self.cycle();
-            }
+            sleep(self.program_delay);
+            self.cycle();
+        }
+    }
+    pub fn set_speed_hz(&mut self, hertz: u32) {
+        if hertz > 0 {
+            warn!("{}, {:?}", hertz, self.program_delay);
+            self.program_delay = Duration::new(0, ((1.0 / hertz as f64) * 1000000000.0) as u32);
+            self.hz = hertz;
         }
     }
     pub fn cycle(&mut self) {
         self.device.pump();
-        self.delay_timer.touch();
-        self.program_timer.touch();
-        self.sound_timer.touch();
+        self.delay_timer.touch_check();
+        self.sound_timer.touch_check();
         self.run_opcode_instruction();
         let pc = self.pc as usize;
         self.opcode = self.opcode_at_address(pc);

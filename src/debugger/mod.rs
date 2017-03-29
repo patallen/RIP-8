@@ -11,6 +11,7 @@ use ::termion::event::{Key, Event};
 use ::termion::async_stdin;
 use opcodes::parse_opcode;
 use self::history::LimitedFifoQueue;
+use std::thread::sleep;
 
 
 #[derive(PartialEq)]
@@ -21,6 +22,7 @@ pub enum Command {
 	Next,
 	Quit,
 	Reset,
+	ChangeSpeed(f32)
 }
 
 #[derive(PartialEq, Debug)]
@@ -89,14 +91,22 @@ impl<'a> Debugger<'a> {
 	fn quit(&mut self) {
 		self.state = State::Quitting;
 	}
+	fn change_speed(&mut self, delta: f32) {
+		let current_hz = self.cpu.hz as f64;
+		warn!("Current hz: {}. Delta: {}", current_hz, delta);
+
+		let next = (current_hz + ((current_hz) * delta as f64)) as u32;
+		self.cpu.set_speed_hz(next);
+	}
 	fn handle_command(&mut self) {
 		match self.last_command {
-			Some(Command::Next) => self.step(1),
-			Some(Command::Back) => self.step(-1),
-			Some(Command::PlayToggle) => self.toggle_play(),
-			Some(Command::Step) => self.step(1),
-			Some(Command::Reset) => self.reset(),
-			Some(Command::Quit) => self.quit(),
+			Some(Command::Next) 			=> self.step(1),
+			Some(Command::Back) 			=> self.step(-1),
+			Some(Command::PlayToggle) 		=> self.toggle_play(),
+			Some(Command::Step) 			=> self.step(1),
+			Some(Command::Reset) 			=> self.reset(),
+			Some(Command::Quit) 			=> self.quit(),
+			Some(Command::ChangeSpeed(val)) => self.change_speed(val),
 			None => {}
 		};
 	}
@@ -106,6 +116,7 @@ impl<'a> Debugger<'a> {
 		self.view.render(&self.lines);
 		let mut events = stdin.keys();
 		loop {
+			sleep(self.cpu.program_delay);
 			self.handle_command();
 			if self.state == State::Running {
 				self.cycle();
@@ -114,10 +125,12 @@ impl<'a> Debugger<'a> {
 				break;
 			}
 			self.last_command = match events.next() {
-				Some(Ok(Key::Char('}')))	=> Some(Command::Next),
-				Some(Ok(Key::Char('{')))	=> Some(Command::Back),
+				Some(Ok(Key::Right))		=> Some(Command::Next),
+				Some(Ok(Key::Left))			=> Some(Command::Back),
 				Some(Ok(Key::Char('p')))	=> Some(Command::PlayToggle),
-				Some(Ok(Key::Char('o')))	=> Some(Command::Step),
+				Some(Ok(Key::Char('n')))	=> Some(Command::Step),
+				Some(Ok(Key::Char('='))) 	=> Some(Command::ChangeSpeed(0.1)),
+				Some(Ok(Key::Char('-'))) 	=> Some(Command::ChangeSpeed(-0.1)),
 				Some(Ok(Key::Backspace)) 	=> Some(Command::Reset),
 				Some(Ok(Key::Esc))			=> Some(Command::Quit),
 				_ 							=> None
