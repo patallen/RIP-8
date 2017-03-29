@@ -6,6 +6,9 @@ use ::termion::raw::{IntoRawMode, RawTerminal};
 use std::io::{Write, stdout, stdin, BufWriter, Result, Stdout};
 use std::fmt;
 
+
+const OPTION_MENU: &'static str = "| Instructions <Left | Right> | State <P> (Pause/Play) | Quit <ESC> | Speed <UP | DWN> |";
+
 pub struct View<'view> {
 	stdout: BufWriter<RawTerminal<Stdout>>,
 	message: Option<String>,

@@ -108,8 +108,8 @@ impl<'cpu> CPU <'cpu>{
     }
     pub fn cycle(&mut self) {
         self.device.pump();
-        self.delay_timer.touch_check();
-        self.sound_timer.touch_check();
+        self.delay_timer.touch();
+        self.sound_timer.touch();
         self.run_opcode_instruction();
         let pc = self.pc as usize;
         self.opcode = self.opcode_at_address(pc);
