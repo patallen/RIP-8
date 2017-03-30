@@ -40,3 +40,45 @@ impl Timer {
         self.delay
     }
 }
+
+
+pub struct Stack {
+    stack: [u16; 16],
+    index: Option<usize>,
+}
+
+impl Stack {
+    pub fn new() -> Stack {
+        Stack {
+            stack: [0; 16],
+            index: None,
+        }
+    }
+    pub fn current_index(&self) -> Option<usize> {
+        self.index
+    }
+    fn push(&mut self, value: u16) {
+        self.increment_index();
+        self.stack[self.index.unwrap()] = value;
+    }
+    fn pop(&mut self) -> u16 {
+        let rv = self.stack[self.index.unwrap()];
+        self.stack[self.index.unwrap()] = 0;
+        self.decrement_index();
+        rv
+    }
+    fn increment_index(&mut self) {
+        match self.index {
+            Some(15) => { panic!("Stack Index HOOB") },
+            Some(val) => { self.index = Some(val + 1) },
+            None => { self.index = Some(1) },
+        }
+    }
+    fn decrement_index(&mut self) {
+        match self.index {
+            Some(0) => {self.index = None },
+            Some(val) => { self.index = Some(val - 1) },
+            None => panic!("Stack Index LOOB"),
+        }
+    }
+}
