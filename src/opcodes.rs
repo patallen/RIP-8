@@ -73,7 +73,7 @@ impl Opcode {
     }
 }
 
-pub fn parse_opcode(code: u16) -> Result<Instruction, &'static str> {
+pub fn parse_opcode(code: u16) -> Result<Instruction, String> {
     match code & 0xF000 {
         0x0000 =>
             match code & 0x00FF {
@@ -99,7 +99,7 @@ pub fn parse_opcode(code: u16) -> Result<Instruction, &'static str> {
                 0x6 => Ok(Instruction::ShiftAndRotateVxRight_0x8XY6),
                 0x7 => Ok(Instruction::DecrementVyByVxNoBorrow_0x8XY7),
                 0xE => Ok(Instruction::ShiftAndRotateVxLeft_0x8XYE),
-                _ => Err("Failed to get opcode at 0x8***")
+                _ => Err(format!("Could not parse opcode: {:04x}", code))
             },
         0x9000 => Ok(Instruction::SkipInstrIfVxNotVy_0x9XY0),
         0xA000 => Ok(Instruction::SetIndexRegToPL_0xANNN),
@@ -110,7 +110,7 @@ pub fn parse_opcode(code: u16) -> Result<Instruction, &'static str> {
             match code & 0x00FF {
                 0x9E => Ok(Instruction::SkipInstrIfVxPressed_0xEX9E),
                 0xA1 => Ok(Instruction::SkipInstrIfVxNotPressed_0xEXA1),
-                _ => Err("Failed to get opcode at 0xE***")
+                _ => Err(format!("Could not parse opcode: {:04x}", code))
             },
         0xF000 => 
             match code & 0x00FF {
@@ -123,9 +123,9 @@ pub fn parse_opcode(code: u16) -> Result<Instruction, &'static str> {
                 0x33 => Ok(Instruction::StoreBCDOfVxIn3Bytes_0xFX33),
                 0x55 => Ok(Instruction::StoreRegsUptoVx_0xFX55),
                 0x65 => Ok(Instruction::ReadRegsUptoVx_0xFX65),
-                _ => Err("Failed to get opcode at 0xF***")
+                _ => Err(format!("Could not parse opcode: {:04x}", code))
             },
-        _ => Err("Could not get opcode.")
+        _ => Err(format!("Could not parse opcode: {:04x}", code))
     }
 }
 
