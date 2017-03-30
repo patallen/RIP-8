@@ -161,7 +161,7 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     fn system_address_jump(&mut self) {
-        println!("Not Implemented.");
+        warn!("0x{:04X} Not Implemented.", self.opcode.value);
 
         self.pc += 2;
     }
@@ -289,15 +289,19 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
-        println!("Not Implemented.");
-        self.pc += 4; // TODO: Change this
+        // warn!("0x{:04X} Not Implemented.", self.opcode.value);
+        let vx = self.regs[self.opcode.x()];
+        let vy = self.regs[self.opcode.y()];
+
+        if vx != vy { self.pc += 2 }
+        self.pc += 2;
     }
     fn set_index_register_to_pl(&mut self) {
         self.index = self.opcode.xyz();
         self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
-        println!("Not Implemented.");
+        warn!("0x{:04X} Not Implemented.", self.opcode.value);
         self.pc += 2;
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
@@ -325,7 +329,10 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
-        println!("Not Implemented.");
+        let vx = self.regs[self.opcode.x()];
+        if self.device.keyboard.check_value_pressed(vx) {
+            self.pc += 2;
+        }
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
