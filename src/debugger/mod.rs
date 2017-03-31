@@ -103,6 +103,7 @@ impl<'a> Debugger<'a> {
             format!("    PC: 0x{:X} || I: 0x{:X}   ", self.cpu.pc, self.cpu.index as usize),
         ];
         self.lines.push(line);
+        self.lines.push(format!("{:?}", self.cpu.regs));
         self.view.render(&self.lines, strings);
     }
     fn toggle_play(&mut self) {
@@ -137,9 +138,9 @@ impl<'a> Debugger<'a> {
         let stdin = async_stdin();
         let mut events = stdin.keys();
         loop {
-            sleep(self.cpu.program_delay);
-            self.handle_command();
+            self.cpu.delay_timer.touch();
             if self.state == State::Running {
+                sleep(self.cpu.program_delay);
                 self.cycle();
             }
             if self.state == State::Quitting {
@@ -157,6 +158,7 @@ impl<'a> Debugger<'a> {
                 Some(Ok(Key::Esc))          => Some(Command::Quit),
                 _                           => None
             };
+            self.handle_command();
         }
     }
     pub fn disassemble_opcode(&self, opcode: &Opcode, cpu: &CPU) -> String {
