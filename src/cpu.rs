@@ -8,6 +8,8 @@ use device::Device;
 use utils::Timer;
 use std::thread::sleep;
 use std::time::Duration;
+use self::rand::random;
+use utils::Stack;
 
 
 pub struct CPU<'cpu> {
@@ -16,8 +18,7 @@ pub struct CPU<'cpu> {
     pub mem: [u8; 4096],
     pub regs: [u8; 16],
     pub index: u16,
-    pub stack: [u16; 16],
-    pub sp: u8,
+    pub stack: Stack,
     pub opcode: Opcode,
     pub pc: u16,
     pub device: Device<'cpu>,
@@ -53,10 +54,9 @@ impl<'cpu> CPU <'cpu>{
             program_delay: pg,
             mem:    [0; 4096],
             regs:   [0; 16],
-            stack:  [0; 16],
+            stack:  Stack::new(),
             index:  0x200,
             opcode: Opcode::from_code(0),
-            sp:     0, // Pointer to the topmost of the stack
             pc:     0x200,
             delay_timer: Timer::new(16_666_667),
             sound_timer: Timer::new(2_000_000),
@@ -70,16 +70,15 @@ impl<'cpu> CPU <'cpu>{
         self.initialize();
         self.mem = [0; 4096];
         self.regs = [0; 16];
-        self.stack = [0; 16];
+        self.stack.clear();
         self.index = 0x200;
-        self.sp = 0;
         self.pc = 0x200;
         self.delay_timer = Timer::new(16_666_667);
         self.sound_timer = Timer::new(2_000_000);
     }
     pub fn initialize(&mut self) {
-        let pc = self.pc as usize;
-        self.opcode = self.opcode_at_address(pc);
+        // self.opcode = self.opcode_at_address(0x200);
+        // warn!("{}", self.opcode.value);
     }
     pub fn run(&mut self) {
         loop {
@@ -97,12 +96,12 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     pub fn cycle(&mut self) {
+        let pc = self.pc as usize;
+        self.opcode = self.opcode_at_address(pc);
         self.device.pump();
         self.delay_timer.touch();
         self.sound_timer.touch();
         self.run_opcode_instruction();
-        let pc = self.pc as usize;
-        self.opcode = self.opcode_at_address(pc);
     }
     pub fn load_rom(&mut self, filepath: &str) {
         let mut rom: Vec<u8> = Vec::new();
@@ -138,7 +137,7 @@ impl<'cpu> CPU <'cpu>{
             Instruction::SetVxToVxANDVy_0x8XY2           =>  self.set_vx_to_vx_and_vy(),
             Instruction::SetVxToVxXORVy_0x8XY3           =>  self.set_vx_to_vx_xor_vy(),
             Instruction::IncrementVxByVyAndCarry_0x8XY4  =>  self.increment_vx_by_vy_carry(),
-            Instruction::DecrementVxByVyNoBorrow_0x8XY5  =>  self.decrenent_vx_by_vy_no_borrow(),
+            Instruction::DecrementVxByVyNoBorrow_0x8XY5  =>  self.decrement_vx_by_vy_no_borrow(),
             Instruction::ShiftAndRotateVxRight_0x8XY6    =>  self.shift_and_rotate_vx_right(),
             Instruction::DecrementVyByVxNoBorrow_0x8XY7  =>  self.decrement_vy_by_vx_no_borrow(),
             Instruction::ShiftAndRotateVxLeft_0x8XYE     =>  self.shift_and_rotate_vx_left(),
@@ -161,35 +160,42 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     fn system_address_jump(&mut self) {
+        // 0nnn - SYS addr
         warn!("0x{:04X} Not Implemented.", self.opcode.value);
 
         self.pc += 2;
     }
     fn return_from_sub(&mut self) {
-        self.sp -= 1;
-        self.pc = self.stack[self.sp as usize];
+        // 00EE - RET
+        let res = self.stack.pop();
+        self.pc = res;
         self.pc += 2;
     }
     fn clear_display(&mut self) {
+        // 00E0 - CLS
         self.device.clear_display();
         self.pc += 2;
     }
     fn jump_to_location(&mut self) {
+        // 1nnn - JP addr
         self.pc = self.opcode.xyz();
     }
     fn call_subroutine(&mut self) {
-        self.stack[self.sp as usize] = self.pc;
-        self.sp += 1;
+        // 2nnn - CALL addr
+        let pc = self.pc;
+        self.stack.push(pc);
         self.pc = self.opcode.xyz();
     }
     fn skip_instr_if_vx_eq_pl(&mut self) {
-        let vx = self.regs[self.opcode.x()];
+        // 3xkk - SE Vx, byte
+        let vx = self.regs[self.opcode.x()];    
         if vx == self.opcode.yz() as u8 {
             self.pc += 2;
         }
         self.pc += 2;
     }
     fn skip_instr_if_vx_neq_pl(&mut self) {
+        // 4xkk - SNE Vx, byte
         let vx = self.regs[self.opcode.x()];
 
         if vx != self.opcode.yz() as u8 {
@@ -198,137 +204,148 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_eq_vy(&mut self) {
+        // 5xy0 - SE Vx, Vy
         if self.regs[self.opcode.x()] == self.regs[self.opcode.y()] {
             self.pc += 2;
         }
         self.pc += 2;
     }
     fn set_vx_to_pl(&mut self) {
+        // 6xkk - LD Vx, byte
         self.regs[self.opcode.x()] = self.opcode.yz() as u8;
         self.pc += 2;
     }
     fn increment_vx_by_pl(&mut self) {
+        // 7xkk - ADD Vx, byte
         let x = self.opcode.x();
         let pl = self.opcode.yz();
-
-        self.regs[x] = ((self.regs[x] as u16 + pl) & 0xFFFF) as u8;
+        self.regs[x] = self.regs[x].wrapping_add(pl as u8);
         self.pc += 2;
     }
     fn set_vx_to_vy(&mut self) {
-        self.regs[self.opcode.x()] = self.regs[self.opcode.y()] as u8;
+        // 8xy0 - LD Vx, Vy
+        self.regs[self.opcode.x()] = self.regs[self.opcode.y()];
         self.pc += 2;
     }
     fn set_vx_to_vx_or_vy(&mut self) {
+        // 8xy1 - OR Vx, Vy
         let x = self.opcode.x();
         let y = self.opcode.y();
-        self.regs[x] = self.regs[x] | self.regs[y];
+        self.regs[x] |= self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_and_vy(&mut self) {
+        // 8xy2 - AND Vx, Vy
         let x = self.opcode.x();
         let y = self.opcode.y();
-        self.regs[x] = self.regs[x] & self.regs[y];
+        self.regs[x] &= self.regs[y];
         self.pc += 2;
     }
     fn set_vx_to_vx_xor_vy(&mut self) {
+        // 8xy3 - XOR Vx, Vy
         let x = self.opcode.x();
         let y = self.opcode.y();
-        self.regs[x] = self.regs[x] ^ self.regs[y];
+        self.regs[x] ^= self.regs[y];
         self.pc += 2;
     }
     fn increment_vx_by_vy_carry(&mut self) {
-        let vx = self.regs[self.opcode.x()] as u16;
-        let vy = self.regs[self.opcode.y()] as u16;
-
-        let mut val: u16 = vx + vy;
-        let mut carry = 0;
-        if val > 255 {
-            val = val - (val / 256 * 256) + 1;
-            carry = 1;
-        }
-        self.regs[self.opcode.x()] = val as u8;
-        self.regs[0xF] = carry as u8;
-
-        self.pc += 2;
-    }
-    fn decrenent_vx_by_vy_no_borrow(&mut self) {
+        // 8xy4 - ADD Vx, Vy
         let vx = self.regs[self.opcode.x()];
         let vy = self.regs[self.opcode.y()];
 
-        self.regs[0xF] = 0;
+        if vy > (0xFF - vx) {
+            self.regs[0xF] = 1;
+        } else {
+            self.regs[0xF] = 0;
+        }
+        self.regs[self.opcode.x()] = vx.wrapping_add(vy);
+        self.pc += 2;
+    }
+    fn decrement_vx_by_vy_no_borrow(&mut self) {
+        // 8xy5 - SUB Vx, Vy
+        let vx = self.regs[self.opcode.x()];
+        let vy = self.regs[self.opcode.y()];
+
         if vx > vy {
             self.regs[0xF] = 1;
+        } else {
+            self.regs[0xF] = 0;
         }
         self.regs[self.opcode.x()] = vx.wrapping_sub(vy);
 
         self.pc += 2;
     }
     fn shift_and_rotate_vx_right(&mut self) {
+        // 8xy6 - SHR Vx {, Vy}
         let x = self.opcode.x();
-        self.regs[0xF] = self.regs[x] & 1;
-        self.regs[x] = self.regs[x] >> 1;
+        self.regs[0xF] = self.regs[x] & 0b1;
+        self.regs[x] = self.regs[x] >> 0b1;
         self.pc += 2;
     }
     fn decrement_vy_by_vx_no_borrow(&mut self) {
+        // 8xy7 - SUBN Vx, Vy
         let x = self.opcode.x();
         let vx = self.regs[x];
         let vy = self.regs[self.opcode.y()];
 
-        self.regs[0xF] = 0;
         if vy > vx {
             self.regs[0xF] = 1;
+        } else {
+            self.regs[0xF] = 0
         }
         self.regs[x] = vy.wrapping_sub(vx);
 
         self.pc += 2;
     }
     fn shift_and_rotate_vx_left(&mut self) {
+        // 8xyE - SHL Vx {, Vy}
         let x = self.opcode.x();
-        self.regs[0xF] = self.regs[x] >> 7;
+        self.regs[0xF] >>= 7;
         self.regs[x] = self.regs[x].wrapping_add(self.regs[x]);
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_vy(&mut self) {
-        // warn!("0x{:04X} Not Implemented.", self.opcode.value);
+        // 9xy0 - SNE Vx, Vy
         let vx = self.regs[self.opcode.x()];
         let vy = self.regs[self.opcode.y()];
 
-        if vx != vy { self.pc += 2 }
+        if vx != vy { self.pc += 2 };
         self.pc += 2;
     }
     fn set_index_register_to_pl(&mut self) {
+        // Annn - LD I, addr
         self.index = self.opcode.xyz();
         self.pc += 2;
     }
     fn jump_to_v0_plus_pl(&mut self) {
-        warn!("0x{:04X} Not Implemented.", self.opcode.value);
-        self.pc += 2;
+        // Bnnn - JP V0, addr
+        let v0 = self.regs[0] as u16;
+        let nnn = self.opcode.xyz();
+        self.pc = nnn.wrapping_add(v0);
     }
     fn set_vx_rand_byte_and_pl(&mut self) {
-        let random: u8 = rand::random();
-        self.regs[self.opcode.x()] = (self.opcode.yz() as u8) & random;
+        // Cxkk - RND Vx, byte
+        let x = self.opcode.x();
+        self.regs[x] = random::<u8>() & self.opcode.yz() as u8;
         self.pc += 2;
     }
     fn display_sprite_set_vf_collision(&mut self) {
+        // Dxyn - DRW Vx, Vy, nibble
         let x = self.regs[self.opcode.x()];
         let y = self.regs[self.opcode.y()];
-
-        let mut flag = false;
+        self.regs[0xF] = 0;
         for i in 0..self.opcode.z() {
             let byte = self.mem[self.index as usize + i as usize];
             let res = self.device.write_byte(byte, x as usize, y as usize + i as usize);
-            flag = flag || res;
+            if res == true {
+                self.regs[0xF] = 1;
+            }
         };
-
-        match flag {
-            true => self.regs[0xF] = 1,
-            false => self.regs[0xF] = 0,
-        }
-
         self.device.draw();
         self.pc += 2;
     }
     fn skip_instr_if_vx_pressed(&mut self) {
+        // Ex9E - SKP Vx
         let vx = self.regs[self.opcode.x()];
         if self.device.keyboard.check_value_pressed(vx) {
             self.pc += 2;
@@ -336,6 +353,7 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn skip_instr_if_vx_not_pressed(&mut self) {
+        // ExA1 - SKNP Vx
         let vx = self.regs[self.opcode.x()];
         if !self.device.keyboard.check_value_pressed(vx) {
             self.pc += 2;
@@ -343,10 +361,12 @@ impl<'cpu> CPU <'cpu>{
         self.pc += 2;
     }
     fn set_vx_to_delay_timer_val(&mut self) {
+        // Fx07 - LD Vx, DT
         self.regs[self.opcode.x()] = self.delay_timer.get_delay();
         self.pc += 2;
     }
     fn wait_for_key_and_store_in_vx(&mut self) {
+        // Fx0A - LD Vx, K
         match self.device.keyboard.get_pressed_key() {
             Some(value) => {
                 self.regs[self.opcode.x()] = value;
@@ -358,51 +378,57 @@ impl<'cpu> CPU <'cpu>{
 
     }
     fn set_delay_timer_to_vx(&mut self) {
+        // Fx15 - LD DT, Vx
         let vx = self.regs[self.opcode.x()];
         self.delay_timer.set_delay(vx);
         self.pc += 2;
     }
     fn set_sound_timer_to_vx(&mut self) {
+        // Fx18 - LD ST, Vx
         let vx = self.regs[self.opcode.x()];
         self.sound_timer.set_delay(vx);
         self.pc += 2;
     }
     fn increment_index_register_by_vx(&mut self) {
-        self.index += self.regs[self.opcode.x()] as u16;
+        // Fx1E - ADD I, Vx
+        let x = self.opcode.x();
+        let r: u32 = self.index as u32 + self.regs[x] as u32;
+        self.index = (r & 0xFFF) as u16;
+        self.regs[0xf] = (r > 0xFFF) as u8;
         self.pc += 2;
     }
     fn set_index_register_to_vx_sprite(&mut self) {
+        // Fx29 - LD F, Vx
         let vx = self.regs[self.opcode.x()];
         self.index = (vx * 5) as u16;
         self.pc += 2;
     }
     fn store_bcd_of_vx_3bytes(&mut self) {
+        // Fx33 - LD B, Vx
         let vx = self.regs[self.opcode.x()];
-        let hunds = vx / 100 * 100;
-        let tens = (vx - hunds) / 10 * 10;
-        let ones = vx - hunds - tens;
-        self.mem[self.index as usize] = hunds / 100;
-        self.mem[self.index as usize + 1] = tens / 10;
-        self.mem[self.index as usize + 2] = ones;
+        self.mem[self.index as usize] = vx / 100;
+        self.mem[self.index as usize + 1] = (vx % 100) / 10;
+        self.mem[self.index as usize + 2] = vx % 10;
 
         self.pc += 2;
     }
     fn store_registers_through_vx(&mut self) {
+        // Fx55 - LD [I], Vx
         let x = self.opcode.x();
 
-        for i in 0..x + 1 {
-            let ii = i as usize;
-            self.mem[self.index as usize + ii as usize] = self.regs[ii];
+        for i in 0..(x + 1) {
+            self.mem[self.index as usize] = self.regs[i as usize];
+            self.index += 1;
         }
-        self.index = self.index + x as u16 - 1 as u16;
         self.pc += 2;
     }
     fn read_registers_through_vx(&mut self) {
+        // Fx65 - LD Vx, [I]
         let x = self.opcode.x();
-        let index = self.index as usize;
 
-        for i in 0..x + 1 {
-            self.regs[i] = self.mem[index + i];
+        for i in 0..(x + 1) {
+            self.regs[i] = self.mem[self.index as usize];
+            self.index += 1;
         }
         self.pc += 2;
     }

@@ -57,11 +57,11 @@ impl Stack {
     pub fn current_index(&self) -> Option<usize> {
         self.index
     }
-    fn push(&mut self, value: u16) {
+    pub fn push(&mut self, value: u16) {
         self.increment_index();
         self.stack[self.index.unwrap()] = value;
     }
-    fn pop(&mut self) -> u16 {
+    pub fn pop(&mut self) -> u16 {
         let rv = self.stack[self.index.unwrap()];
         self.stack[self.index.unwrap()] = 0;
         self.decrement_index();
@@ -80,5 +80,12 @@ impl Stack {
             Some(val) => { self.index = Some(val - 1) },
             None => panic!("Stack Index LOOB"),
         }
+    }
+    pub fn peek(&self, index: usize) -> u16 {
+        self.stack[index]
+    }
+    pub fn clear(&mut self) {
+        self.index = None;
+        self.stack = [0; 16];
     }
 }
