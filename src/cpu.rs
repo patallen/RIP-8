@@ -331,16 +331,18 @@ impl<'cpu> CPU <'cpu>{
     }
     fn display_sprite_set_vf_collision(&mut self) {
         // Dxyn - DRW Vx, Vy, nibble
-        let x = self.regs[self.opcode.x()];
-        let y = self.regs[self.opcode.y()];
+        let x = self.regs[self.opcode.x()] as usize;
+        let y = self.regs[self.opcode.y()] as usize;
+        let z = self.opcode.z();
+
         self.regs[0xF] = 0;
-        for i in 0..self.opcode.z() {
-            let byte = self.mem[self.index as usize + i as usize];
-            let res = self.device.write_byte(byte, x as usize, y as usize + i as usize);
-            if res == true {
-                self.regs[0xF] = 1;
-            }
-        };
+        let mut new: Vec<u8> = Vec::new();
+        
+        for i in 0..z {
+            new.push(self.mem[i + self.index as usize]);
+        }
+
+        self.regs[0xf] = self.device.write_bytes(new, x, y);
         self.device.draw();
         self.pc += 2;
     }

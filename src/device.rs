@@ -44,8 +44,8 @@ impl<'d> Device<'d> {
             }
         }
     }
-    pub fn write_byte(&mut self, byte: u8, x: usize, y:usize) -> bool {
-        self.display.write_byte(byte, x, y)
+    pub fn write_bytes(&mut self, byte: Vec<u8>, x: usize, y:usize) -> u8 {
+        self.display.write_bytes(byte, x, y)
     }
     pub fn clear_display(&mut self) {
         self.display.clear();

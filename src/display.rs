@@ -14,7 +14,7 @@ const PIXEL_SIZE: usize = DISPLAY_HEIGHT / SCREEN_HEIGHT;
 const TITLE: &str = "RIP-8::CHIP-8";
 
 pub struct Display<'d> {
-    pixels: [u8; SCREEN_PIXELS],
+    pixels: [bool; SCREEN_PIXELS],
     renderer: Renderer<'d>,
 }
 
@@ -27,28 +27,30 @@ impl<'d> Display<'d> {
         let renderer = window.renderer().accelerated()
                               .build().unwrap();
         Display {
-            pixels: [0; SCREEN_PIXELS],
+            pixels: [false; SCREEN_PIXELS],
             renderer: renderer,
         }
     }
-    pub fn write_byte(&mut self, byte: u8, x: usize, y: usize) -> bool {
-        let bytearr = self.byte_to_digits(byte);
-        let limit = (y+1) * SCREEN_WIDTH - 1;
-        let start = x + y * SCREEN_WIDTH;
+    pub fn write_bytes(&mut self, bytes: Vec<u8>, x: usize, y: usize) -> u8 {
+        let mut rv = 0;
+        for (r, byte) in bytes.into_iter().enumerate() {
+            let sy = (r + y) % SCREEN_HEIGHT;
 
-        let mut erased = false;
-        for (i, bit) in bytearr.into_iter().enumerate() {
-            if i + start > limit {
-                break;
-            }
-            let old = self.pixels[i + start];
+            for j in 0..8 {
+                let sx = (x + j) % SCREEN_WIDTH;
+                let offset = sy * SCREEN_WIDTH + sx;
 
-            self.pixels[i + start] = old ^ bit;
-            if old == 1 && self.pixels[i + start] != old {
-                erased = true
+                let dot = &mut self.pixels[offset];
+                let was_set = *dot;
+
+                let dot_set = (byte >> (7 - j)) & 1;
+
+                *dot = ((*dot as u8) ^ dot_set) != 0;
+
+                rv |= (was_set && !*dot) as u8;
             }
         }
-        erased
+        rv
     }
 
     fn byte_to_digits(&self, byte: u8) -> [u8; 8] {
@@ -65,7 +67,7 @@ impl<'d> Display<'d> {
         self.renderer.clear();
         self.renderer.set_draw_color(Color::RGB(255, 255, 255));
         for (idx, p) in self.pixels.into_iter().enumerate() {
-            if *p > 0{
+            if *p {
                 let x = idx - (idx / SCREEN_WIDTH * SCREEN_WIDTH);
                 let y = idx / SCREEN_WIDTH;
                 let pixel = Pixel::new(x, y);
@@ -75,7 +77,7 @@ impl<'d> Display<'d> {
         self.renderer.present();
     }
     pub fn clear(&mut self) {
-        self.pixels = [0; SCREEN_PIXELS];
+        self.pixels = [false; SCREEN_PIXELS];
     }
 }
 
