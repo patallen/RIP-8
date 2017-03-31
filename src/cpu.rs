@@ -304,7 +304,7 @@ impl<'cpu> CPU <'cpu>{
     fn shift_and_rotate_vx_left(&mut self) {
         // 8xyE - SHL Vx {, Vy}
         let x = self.opcode.x();
-        self.regs[0xF] >>= 7;
+        self.regs[0xF] = self.regs[x] as u8 >> 7;
         self.regs[x] = self.regs[x].wrapping_add(self.regs[x]);
         self.pc += 2;
     }
@@ -423,8 +423,7 @@ impl<'cpu> CPU <'cpu>{
         let x = self.opcode.x();
 
         for i in 0..(x + 1) {
-            self.mem[self.index as usize] = self.regs[i as usize];
-            self.index += 1;
+            self.mem[self.index as usize + i] = self.regs[i as usize];
         }
         self.pc += 2;
     }
@@ -433,8 +432,7 @@ impl<'cpu> CPU <'cpu>{
         let x = self.opcode.x();
 
         for i in 0..(x + 1) {
-            self.regs[i] = self.mem[self.index as usize];
-            self.index += 1;
+            self.regs[i] = self.mem[self.index as usize + i];
         }
         self.pc += 2;
     }
