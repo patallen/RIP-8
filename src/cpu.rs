@@ -96,6 +96,10 @@ impl<'cpu> CPU <'cpu>{
         }
     }
     pub fn cycle(&mut self) {
+        match self.sound_timer.get_delay() {
+            0 => self.device.audio.pause(),
+            _ => self.device.audio.resume(),
+        }
         let pc = self.pc as usize;
         self.opcode = self.opcode_at_address(pc);
         self.device.pump();
