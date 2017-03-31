@@ -63,9 +63,9 @@ impl<'d> Display<'d> {
     }
 
     pub fn draw(&mut self) {
-        self.renderer.set_draw_color(Color::RGB(0, 0, 0));
+        self.renderer.set_draw_color(Color::RGB (28,28,28));
         self.renderer.clear();
-        self.renderer.set_draw_color(Color::RGB(255, 255, 255));
+        self.renderer.set_draw_color(Color::RGB(230, 230, 230));
         for (idx, p) in self.pixels.into_iter().enumerate() {
             if *p {
                 let x = idx - (idx / SCREEN_WIDTH * SCREEN_WIDTH);
